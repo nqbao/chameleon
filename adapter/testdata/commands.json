@@ -1,0 +1,1308 @@
+[
+  {
+    "Runtime": "claude",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--system-prompt",
+      "be concise",
+      "-p",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "claude",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "claude",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--system-prompt",
+      "be concise",
+      "-p",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "claude",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "claude",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--settings",
+      "{\"sandbox\":{\"enabled\":true}}",
+      "--system-prompt",
+      "be concise",
+      "-p",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "claude",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "claude",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--permission-mode",
+      "bypassPermissions",
+      "--settings",
+      "{\"sandbox\":{\"enabled\":true}}",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "exec",
+      "--model",
+      "test-model",
+      "--color",
+      "never",
+      "--json",
+      "resume",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "--session",
+      "session-123",
+      "--model",
+      "test-model",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "exec",
+      "--model",
+      "test-model",
+      "--color",
+      "never",
+      "--json",
+      "resume",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "--session",
+      "session-123",
+      "--model",
+      "test-model",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "exec",
+      "--model",
+      "test-model",
+      "--sandbox",
+      "workspace-write",
+      "--color",
+      "never",
+      "--json",
+      "resume",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "codex",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "codex",
+    "Args": [
+      "--session",
+      "session-123",
+      "--model",
+      "test-model",
+      "--sandbox",
+      "workspace-write",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--prompt",
+      "hello",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--yolo",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--yolo",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--prompt",
+      "hello",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--yolo",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--yolo",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--output-format",
+      "stream-json",
+      "--prompt",
+      "hello",
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--yolo",
+      "--sandbox",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "gemini",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "gemini",
+    "Args": [
+      "--resume",
+      "session-123",
+      "--model",
+      "test-model",
+      "--sandbox",
+      "--yolo",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "run",
+      "--dir",
+      "/tmp/work",
+      "--format",
+      "json",
+      "--dangerously-skip-permissions",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--dangerously-skip-permissions"
+    ],
+    "Env": null,
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "run",
+      "--dir",
+      "/workspace/work",
+      "--format",
+      "json",
+      "--dangerously-skip-permissions",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--dangerously-skip-permissions"
+    ],
+    "Env": null,
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "run",
+      "--dir",
+      "/tmp/work",
+      "--format",
+      "json",
+      "--dangerously-skip-permissions",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb"
+    ],
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "opencode",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "opencode",
+    "Args": [
+      "--prompt",
+      "be concise",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--dangerously-skip-permissions"
+    ],
+    "Env": null,
+    "UnsetEnv": [
+      "OPENCODE_SERVER_PASSWORD",
+      "OPENCODE_SERVER_USERNAME"
+    ]
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--mode",
+      "json",
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--system-prompt",
+      "be concise",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb",
+      "PI_OFFLINE=1"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--resume",
+      "session-123",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--mode",
+      "json",
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--system-prompt",
+      "be concise",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb",
+      "PI_OFFLINE=1"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--resume",
+      "session-123",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--mode",
+      "json",
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--session",
+      "session-123",
+      "--system-prompt",
+      "be concise",
+      "hello"
+    ],
+    "Env": [
+      "NO_COLOR=1",
+      "TERM=dumb",
+      "PI_OFFLINE=1"
+    ],
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "pi",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "pi",
+    "Args": [
+      "--extension",
+      "$PI_GATE",
+      "--model",
+      "test-model",
+      "--resume",
+      "session-123",
+      "--system-prompt",
+      "be concise"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "host",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "docker",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/workspace/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": false,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": false,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  },
+  {
+    "Runtime": "shell",
+    "Environment": "sandbox",
+    "Context": {
+      "Prompt": "hello",
+      "SystemPrompt": "be concise",
+      "WorkspaceDir": "/tmp/work",
+      "Files": null,
+      "Images": null,
+      "SessionID": "session-123",
+      "Model": "test-model",
+      "Yolo": true,
+      "Interactive": true,
+      "Sandbox": true,
+      "ExtraArgs": null,
+      "Tools": null,
+      "ProviderSettings": null,
+      "OutputFormat": "",
+      "JSONSchema": ""
+    },
+    "Name": "test-model",
+    "Args": [
+      "-c",
+      "hello"
+    ],
+    "Env": null,
+    "UnsetEnv": null
+  }
+]
