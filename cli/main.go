@@ -70,7 +70,7 @@ func Main(ctx context.Context, args []string, streams IO) int {
 func run(ctx context.Context, args []string, streams IO) int {
 	opts, err := parseRunArgsIO(args, streams.Stderr)
 	if errors.Is(err, flag.ErrHelp) {
-		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools")
+		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools --env --env-file")
 		return 0
 	}
 	if err != nil {
@@ -107,7 +107,12 @@ func run(ctx context.Context, args []string, streams IO) int {
 			return 1
 		}
 	}
-	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, ExtraArgs: opts.extraArgs, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr})
+	envVars, err := resolveEnvVars(options.Home, opts.envFiles, opts.envFlags, os.LookupEnv)
+	if err != nil {
+		fmt.Fprintln(streams.Stderr, err)
+		return 1
+	}
+	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, EnvVars: envVars, ExtraArgs: opts.extraArgs, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr})
 	if err != nil {
 		if result.Content != "" {
 			fmt.Fprintln(streams.Stderr, result.Content)

@@ -103,6 +103,31 @@ Use `Options.HostSpec`, `DockerSpec`, and `SandboxSpec` with the exported
 runtime command builders and output parsers. `cli.Main(ctx, args, cli.IO{...})`
 embeds the run CLI.
 
+## Environment variables for the agent
+
+Extra variables reach the agent process in every environment (host, sandbox and
+Docker). Sources, from lowest to highest precedence:
+
+1. `<home>/env`, loaded automatically if present (`~/.chameleon/env` by default)
+2. `--env-file path`, repeatable, in order
+3. `--env NAME=value`, or `--env NAME` to copy `NAME` from the current environment
+   (an error if it is unset). Repeatable.
+
+They override workspace secrets from `secrets.yml` and the inherited environment.
+
+```sh
+cham run --agent claude --env-file .env.agent --env GH_TOKEN -p 'Open a PR'
+```
+
+Env files are a small dotenv subset: `NAME=value` lines, `#` comments, optional
+`export `, `'literal'` and `"escaped\n"` quoted values. There is no variable
+expansion and no multi-line values. Docker gets the values through a private
+`--env-file`, so they do not appear in `docker run` arguments. Prefer `--env NAME`
+or a file over `--env NAME=value` for secrets, since command-line values are
+visible in `ps`. There is intentionally no workspace-level env file: the agent
+can edit files in the repository, and a repository should not be able to inject
+variables such as `PATH` into host runs. Embedders set `Request.EnvVars`.
+
 ## Development status
 
 ```sh

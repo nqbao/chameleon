@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -70,5 +71,46 @@ func TestMissingSecretFailsClosed(t *testing.T) {
 	_, err := (cham.Options{Home: t.TempDir()}).Run(context.Background(), cham.Request{Runtime: "shell", Dir: dir, Prompt: "echo should-not-run"})
 	if err == nil {
 		t.Fatal("expected missing-secret error")
+	}
+}
+
+func TestRunExtraEnvVars(t *testing.T) {
+	dir := t.TempDir()
+	home := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".chameleon"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".chameleon", "secrets.yml"), []byte("secrets:\n  - app/value?as=VALUE\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	backend := &secrets.LocalBackend{Dir: filepath.Join(home, "secrets"), KeyFile: filepath.Join(home, "key")}
+	if err := backend.Set("app/value", []byte("secret")); err != nil {
+		t.Fatal(err)
+	}
+	options := cham.Options{Home: home, BaseEnv: []string{"BASE=base"}}
+	prompt := `printf '%s|%s|%s|%s' "$VALUE" "$EXTRA" "$BASE" "$EMPTY"`
+	// Extra vars are added, override workspace secrets and the base environment,
+	// and the last duplicate wins.
+	for _, kind := range []cham.EnvKind{cham.Host, cham.Sandbox} {
+		if kind == cham.Sandbox && runtime.GOOS != "darwin" {
+			continue
+		}
+		result, err := options.Run(context.Background(), cham.Request{Runtime: "shell", Env: kind, Dir: dir, Prompt: prompt,
+			EnvVars: []string{"EXTRA=1", "VALUE=cli", "BASE=over", "EXTRA=2", "EMPTY="}})
+		if err != nil {
+			t.Fatalf("%s: %v", kind, err)
+		}
+		if result.Content != "cli|2|over|" {
+			t.Fatalf("%s: content=%q", kind, result.Content)
+		}
+	}
+}
+
+func TestRunRejectsInvalidEnvVars(t *testing.T) {
+	for _, bad := range []string{"NOEQUALS", "1BAD=x", "A-B=x", "=x", "OK=a\x00b"} {
+		_, err := (cham.Options{}).Run(context.Background(), cham.Request{Runtime: "shell", Dir: t.TempDir(), Prompt: "true", EnvVars: []string{bad}})
+		if err == nil {
+			t.Errorf("%q must be rejected", bad)
+		}
 	}
 }

@@ -59,6 +59,7 @@ type Request struct {
 	NoNetwork, Yolo, Interactive, Setup             bool
 	Shell, JSONSchema                               string
 	Tools, ExtraArgs, Files, Images                 []string
+	EnvVars                                         []string // extra NAME=value pairs for the agent process; override workspace secrets; every environment kind
 	Stdin                                           io.Reader
 	Stdout, Stderr                                  io.Writer
 	OnStreamEvent                                   func(adapter.StreamEvent)
@@ -103,8 +104,11 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		return fail(err)
 	}
 	ws := Workspace{Path: req.Dir}
+	if err := validateEnvVars(req.EnvVars); err != nil {
+		return fail(err)
+	}
 	var spec environment.EnvironmentSpec
-	var env environment.Environment
+	var newEnv func(environment.EnvironmentSpec) environment.Environment
 	switch kind {
 	case Docker:
 		var providers []environment.CredentialProvider
@@ -112,26 +116,32 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 			providers = append(providers, p)
 		}
 		spec, err = o.DockerSpec(ws, DockerOpts{Image: req.Image, Socket: req.DockerSocket, RunArgs: req.DockerArgs, Providers: providers})
-		env = environment.NewDockerEnvironment(spec)
+		newEnv = func(s environment.EnvironmentSpec) environment.Environment {
+			return environment.NewDockerEnvironment(s)
+		}
 	case Sandbox:
 		switch adapter.NormalizeChatRuntime(req.Runtime) {
 		case "codex", "gemini", "claude":
 			spec, err = o.HostSpec(ws, nil)
-			env = environment.NewHostEnvironment(spec)
+			newEnv = func(s environment.EnvironmentSpec) environment.Environment { return environment.NewHostEnvironment(s) }
 			if req.NoNetwork && req.Stderr != nil {
 				fmt.Fprintf(req.Stderr, "warning: --sandbox-no-network has no effect for %s\n", rt.Name())
 			}
 		default:
 			spec, err = o.SandboxSpec(ws, req.NoNetwork)
-			env = environment.NewSandboxEnvironment(spec)
+			newEnv = func(s environment.EnvironmentSpec) environment.Environment {
+				return environment.NewSandboxEnvironment(s)
+			}
 		}
 	default:
 		spec, err = o.HostSpec(ws, nil)
-		env = environment.NewHostEnvironment(spec)
+		newEnv = func(s environment.EnvironmentSpec) environment.Environment { return environment.NewHostEnvironment(s) }
 	}
 	if err != nil {
 		return fail(err)
 	}
+	spec.SecretEnv = mergeEnvVars(spec.SecretEnv, req.EnvVars)
+	env := newEnv(spec)
 	workspaceDir := req.Dir
 	if kind == Docker {
 		workspaceDir = environment.ContainerWorkspaceDir(ws)
@@ -284,4 +294,50 @@ func guardArgs(req *Request) error {
 		req.SystemPrompt = " " + req.SystemPrompt
 	}
 	return nil
+}
+
+// validateEnvVars checks that every entry is NAME=value with a POSIX name.
+func validateEnvVars(vars []string) error {
+	for _, kv := range vars {
+		name, _, ok := strings.Cut(kv, "=")
+		if !ok || !validEnvName(name) {
+			return fmt.Errorf("invalid environment variable %q: want NAME=value with NAME matching [A-Za-z_][A-Za-z0-9_]*", name)
+		}
+		if strings.ContainsRune(kv, 0) {
+			return fmt.Errorf("environment variable %q contains a NUL byte", name)
+		}
+	}
+	return nil
+}
+
+func validEnvName(s string) bool {
+	for i, c := range s {
+		if c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || i > 0 && c >= '0' && c <= '9' {
+			continue
+		}
+		return false
+	}
+	return s != ""
+}
+
+// mergeEnvVars appends extra to base; a later NAME replaces an earlier one, so
+// each name appears once. This matters for docker --env-file, where duplicate
+// handling is not something to rely on.
+func mergeEnvVars(base, extra []string) []string {
+	if len(extra) == 0 {
+		return base
+	}
+	last := map[string]int{}
+	all := append(append([]string{}, base...), extra...)
+	for i, kv := range all {
+		name, _, _ := strings.Cut(kv, "=")
+		last[name] = i
+	}
+	out := make([]string, 0, len(all))
+	for i, kv := range all {
+		if name, _, _ := strings.Cut(kv, "="); last[name] == i {
+			out = append(out, kv)
+		}
+	}
+	return out
 }
