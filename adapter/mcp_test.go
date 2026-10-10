@@ -314,7 +314,7 @@ func TestMergeOpenCodeInline(t *testing.T) {
 	if got, err := mergeOpenCodeInline("", gen); err != nil || string(got) != string(gen) {
 		t.Errorf("empty existing: %s %v", got, err)
 	}
-	for name, bad := range map[string]string{"not json": `nope`, "array": `[]`, "mcp not object": `{"mcp": 3}`} {
+	for name, bad := range map[string]string{"not json": `nope`, "array": `[]`, "null": `null`, " null ": ` null `, "mcp null": `{"mcp": null}`, "mcp not object": `{"mcp": 3}`} {
 		if _, err := mergeOpenCodeInline(bad, gen); err == nil {
 			t.Errorf("%s: expected error", name)
 		}
@@ -342,7 +342,10 @@ func TestOpenCodeMCPKeepsInlineConfigFromEnv(t *testing.T) {
 	if !reflect.DeepEqual(cmd.MergedEnv, []string{"OPENCODE_CONFIG_CONTENT"}) {
 		t.Errorf("MergedEnv = %v", cmd.MergedEnv)
 	}
-	if _, err := (&OpenCodeRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", MCPServers: servers, Env: []string{"OPENCODE_CONFIG_CONTENT=nope"}}); err == nil {
-		t.Error("malformed inline config: expected error")
+	for _, bad := range []string{"nope", "null"} {
+		// Must return an error, not panic.
+		if _, err := (&OpenCodeRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", MCPServers: servers, Env: []string{"OPENCODE_CONFIG_CONTENT=" + bad}}); err == nil {
+			t.Errorf("inline config %q: expected error", bad)
+		}
 	}
 }

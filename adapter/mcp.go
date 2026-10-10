@@ -400,6 +400,9 @@ func mergeOpenCodeInline(existing string, generated []byte) ([]byte, error) {
 	if err := json.Unmarshal([]byte(existing), &base); err != nil {
 		return nil, fmt.Errorf("OPENCODE_CONFIG_CONTENT is not a valid JSON object: %w", err)
 	}
+	if base == nil { // the JSON literal null unmarshals without error
+		return nil, fmt.Errorf("OPENCODE_CONFIG_CONTENT is not a valid JSON object: got null")
+	}
 	var gen struct {
 		MCP map[string]json.RawMessage `json:"mcp"`
 	}
