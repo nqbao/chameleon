@@ -21,8 +21,12 @@ func (a *CodexRuntime) SetupCmd() []string                          { return []s
 func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) {
 	// ctx.Tools is intentionally not wired: codex exec has no tool filtering flag
 	// as of the time of writing.
+	mcpArgs, err := codexMCPArgs(ctx.MCPServers)
+	if err != nil {
+		return AgentCommand{}, err
+	}
 	if ctx.Interactive {
-		var args []string
+		args := append([]string{}, mcpArgs...)
 		if ctx.SessionID != "" {
 			args = append(args, "--session", ctx.SessionID)
 		}
@@ -41,7 +45,7 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 		}
 		return AgentCommand{Name: "codex", Args: args}, nil
 	}
-	args := []string{"exec"}
+	args := append([]string{"exec"}, mcpArgs...)
 	if ctx.Model != "" {
 		args = append(args, "--model", ctx.Model)
 	}

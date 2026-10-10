@@ -281,3 +281,13 @@ func TestParseRunArgsDockerArgs(t *testing.T) {
 		t.Fatal("unterminated quote must fail")
 	}
 }
+
+func TestParseRunArgsMCPConfig(t *testing.T) {
+	opts, err := parseRunArgs([]string{"--agent", "claude", "--mcp-config", "a.json", "--mcp-config=b.json", "-p", "hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(opts.mcpConfig, []string{"a.json", "b.json"}) {
+		t.Errorf("mcpConfig = %v", opts.mcpConfig)
+	}
+}

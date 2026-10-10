@@ -59,6 +59,7 @@ type Request struct {
 	NoNetwork, Yolo, Interactive, Setup             bool
 	Shell, JSONSchema                               string
 	Tools, ExtraArgs, Files, Images                 []string
+	MCPConfig                                       []string // paths to {"mcpServers": {...}} JSON files, merged in order; trusted input: stdio servers run commands as the agent's user
 	EnvVars                                         []string // extra NAME=value pairs for the agent process; override workspace secrets; every environment kind
 	Stdin                                           io.Reader
 	Stdout, Stderr                                  io.Writer
@@ -100,6 +101,10 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		return fail(fmt.Errorf("docker args require docker environment"))
 	}
 	rt, err := adapter.AgentRuntimeFor(req.Runtime)
+	if err != nil {
+		return fail(err)
+	}
+	mcpServers, err := adapter.LoadMCPConfigs(req.MCPConfig)
 	if err != nil {
 		return fail(err)
 	}
@@ -162,7 +167,7 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		cmd.Name = argv[0]
 		cmd.Args = argv[1:]
 	default:
-		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images})
+		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images, MCPServers: mcpServers})
 		if err != nil {
 			return fail(err)
 		}
@@ -281,6 +286,7 @@ func guardArgs(req *Request) error {
 		{"tool", req.Tools},
 		{"file", req.Files},
 		{"image", req.Images},
+		{"MCP config", req.MCPConfig},
 		{"docker socket", []string{req.DockerSocket}},
 	} {
 		if err := check(c.kind, c.values...); err != nil {

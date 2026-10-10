@@ -50,6 +50,7 @@ type AgentCommandContext struct {
 	// Not supported by Codex or OpenCode (no per-invocation tool filtering available).
 	Tools            []string
 	ProviderSettings map[string]interface{} // merged into --settings JSON for runtimes that support it (claude)
+	MCPServers       map[string]MCPServer   // MCP servers to expose to the agent; runtimes without MCP support return an error when set
 	OutputFormat     string                 // desired output format ("text", "json", ...); empty means runtime default (stream-json for claude)
 	JSONSchema       string                 // raw JSON schema string; if set, requests structured output matching this schema
 }

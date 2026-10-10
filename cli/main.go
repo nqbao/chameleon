@@ -112,7 +112,7 @@ func run(ctx context.Context, args []string, streams IO) int {
 		fmt.Fprintln(streams.Stderr, err)
 		return 1
 	}
-	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, EnvVars: envVars, ExtraArgs: opts.extraArgs, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr})
+	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, EnvVars: envVars, ExtraArgs: opts.extraArgs, MCPConfig: opts.mcpConfig, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr})
 	if err != nil {
 		if result.Content != "" {
 			fmt.Fprintln(streams.Stderr, result.Content)

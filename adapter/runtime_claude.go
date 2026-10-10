@@ -22,6 +22,22 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 	if err != nil {
 		return AgentCommand{}, err
 	}
+	var mcpFile string
+	if len(ctx.MCPServers) > 0 {
+		if mcpFile, err = writeClaudeMCPConfig(ctx.MCPServers); err != nil {
+			return AgentCommand{}, err
+		}
+	}
+	// --mcp-config is variadic, so use the = form to keep later positionals out of it.
+	withMCP := func(cmd AgentCommand) AgentCommand {
+		if mcpFile == "" {
+			return cmd
+		}
+		cmd.Args = append([]string{"--mcp-config=" + mcpFile}, cmd.Args...)
+		cmd.TempFiles = []string{mcpFile}
+		cmd.TempMounts = []string{mcpFile + ":" + mcpFile + ":ro"}
+		return cmd
+	}
 	if ctx.Interactive {
 		var args []string
 		if ctx.SessionID != "" {
@@ -42,7 +58,7 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 		if len(ctx.Tools) > 0 {
 			args = append(args, "--allowedTools", strings.Join(ctx.Tools, ","))
 		}
-		return AgentCommand{Name: "claude", Args: args}, nil
+		return withMCP(AgentCommand{Name: "claude", Args: args}), nil
 	}
 	outFmt := ctx.OutputFormat
 	if outFmt == "" {
@@ -88,7 +104,7 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 		prompt += "Attached paths:\n" + strings.Join(refs, "\n")
 	}
 	args = append(args, "-p", prompt)
-	return AgentCommand{Name: "claude", Args: args, Env: []string{"NO_COLOR=1", "TERM=dumb"}}, nil
+	return withMCP(AgentCommand{Name: "claude", Args: args, Env: []string{"NO_COLOR=1", "TERM=dumb"}}), nil
 }
 
 // claudeSettingsArg builds the JSON string for --settings when sandbox or

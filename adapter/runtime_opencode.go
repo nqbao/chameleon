@@ -25,6 +25,15 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 	}
 	// ctx.Tools is intentionally not wired: opencode run has no tool filtering flag
 	// as of the time of writing.
+	var mcpEnv []string
+	if len(ctx.MCPServers) > 0 {
+		cfg, err := opencodeMCPConfig(ctx.MCPServers)
+		if err != nil {
+			return AgentCommand{}, fmt.Errorf("marshal MCP config: %w", err)
+		}
+		// Inline config is merged over the user's own config, so their other settings survive.
+		mcpEnv = []string{"OPENCODE_CONFIG_CONTENT=" + string(cfg)}
+	}
 	if ctx.Interactive {
 		var args []string
 		if ctx.SystemPrompt != "" {
@@ -42,6 +51,7 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 		return AgentCommand{
 			Name:     "opencode",
 			Args:     args,
+			Env:      mcpEnv,
 			UnsetEnv: []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
 		}, nil
 	}
@@ -69,7 +79,7 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 	return AgentCommand{
 		Name:     "opencode",
 		Args:     args,
-		Env:      []string{"NO_COLOR=1", "TERM=dumb"},
+		Env:      append([]string{"NO_COLOR=1", "TERM=dumb"}, mcpEnv...),
 		UnsetEnv: []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
 	}, nil
 }

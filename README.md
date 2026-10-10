@@ -81,6 +81,41 @@ edit it. Flags such as `--privileged` or a Docker socket mount there remove
 container isolation, so `cham` prints the workspace flags it applies to stderr.
 Only run `--docker` in repositories you trust, or keep those flags in the user file.
 
+## MCP servers
+
+`--mcp-config servers.json` (repeatable; later files replace same-named servers)
+exposes MCP servers to the agent. The file uses the common `mcpServers` format:
+
+```json
+{"mcpServers": {
+  "fs":   {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/work"],
+           "env": {"API_KEY": "${API_KEY}"}},
+  "docs": {"url": "https://example.com/mcp",
+           "headers": {"Authorization": "Bearer ${DOCS_KEY}"}}
+}}
+```
+
+Each server has either `command` (stdio; optional `args`, `env`) or `url` (optional
+`type` of `http` or `sse`, and `headers`). Unknown fields are an error. Chameleon
+translates the file for the runtime:
+
+| Runtime | How it is passed | `${NAME}` references |
+|---|---|---|
+| `claude` | temp file via `--mcp-config` | expanded by Claude |
+| `codex` | `-c mcp_servers.<name>.*` overrides | whole values only (`env_vars`, `env_http_headers`, `bearer_token_env_var`); no `sse` |
+| `opencode` | `OPENCODE_CONFIG_CONTENT`, merged over your config | converted to `{env:NAME}` |
+| `pi`, `shell` | not supported; the run fails | |
+
+Put the variables a server needs in the agent environment with `--env` / `--env-file`.
+Literal secrets in the file reach Codex as command-line arguments, visible in `ps`;
+use `${NAME}` references instead. Under `--docker` the commands in stdio servers must
+exist in the image, and a server on the host needs `host.docker.internal`, not
+`localhost`. `--sandbox-no-network` blocks remote servers.
+
+The file is trusted input: a stdio server runs its command as you. For that reason it
+is a flag (or `Request.MCPConfig`), not run-file frontmatter. Embedders must not fill
+it from untrusted input.
+
 ## Embed
 
 ```go

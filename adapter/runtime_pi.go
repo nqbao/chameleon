@@ -25,6 +25,9 @@ func (a *PiRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) 
 	if ctx.JSONSchema != "" && !ctx.Interactive {
 		return AgentCommand{}, fmt.Errorf("pi does not support --schema")
 	}
+	if err := mcpUnsupported("pi", ctx.MCPServers); err != nil {
+		return AgentCommand{}, err
+	}
 	gate, err := os.CreateTemp("", "cham-pi-gate-*.ts")
 	if err != nil {
 		return AgentCommand{}, fmt.Errorf("pi permission gate: %w", err)
