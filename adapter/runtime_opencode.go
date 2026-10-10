@@ -187,7 +187,7 @@ func (a *OpenCodeRuntime) ParseStreamLine(line []byte) []StreamEvent {
 	switch event.Type {
 	case "text":
 		if event.Part.Type == "text" && event.Part.Text != "" {
-			return []StreamEvent{{Type: "chunk", Content: event.Part.Text}}
+			return []StreamEvent{{Type: "chunk", Content: event.Part.Text}, {Type: "message", Content: event.Part.Text}}
 		}
 	case "tool_use":
 		ev := StreamEvent{Type: "toolCall", Name: event.Part.Tool}

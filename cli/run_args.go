@@ -32,6 +32,8 @@ type runOptions struct {
 	envFiles         []string
 	envFlags         []string
 	mcpConfig        []string
+	stream           bool
+	eventsJSONL      bool
 }
 
 func parseRunArgs(args []string) (runOptions, error) { return parseRunArgsIO(args, io.Discard) }
@@ -59,6 +61,8 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	fs.Var((*repeatedFlag)(&opts.envFiles), "env-file", "file of NAME=value lines injected into the agent's environment; repeatable")
 	fs.Var((*repeatedFlag)(&opts.envFlags), "env", "NAME=value (or NAME to copy from the current environment) injected into the agent's environment; repeatable")
 	fs.Var((*repeatedFlag)(&opts.mcpConfig), "mcp-config", "JSON file of MCP servers ({\"mcpServers\": {...}}) to expose to the agent; repeatable; not supported by the shell runtime")
+	fs.BoolVar(&opts.stream, "stream", false, "print the response and tool calls as the agent produces them (requires -p)")
+	fs.BoolVar(&opts.eventsJSONL, "events-jsonl", false, "write one JSON event per line to stdout as the agent works (requires -p; excludes --stream)")
 	var toolsFlag string
 	fs.StringVar(&toolsFlag, "tools", "", "comma-separated allowlist of tool names (e.g. \"Read,Edit,Bash(git *)\")")
 
@@ -207,6 +211,21 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 		return runOptions{}, fmt.Errorf("--agent (or --runtime) is required")
 	}
 
+	if opts.stream && opts.eventsJSONL {
+		return runOptions{}, fmt.Errorf("--stream and --events-jsonl cannot be used together")
+	}
+	if flagName := streamFlagName(opts); flagName != "" {
+		if opts.prompt == "" {
+			return runOptions{}, fmt.Errorf("%s requires -p", flagName)
+		}
+		if opts.setup || opts.shell != "" {
+			return runOptions{}, fmt.Errorf("%s cannot be used with --setup or --shell", flagName)
+		}
+		if opts.jsonSchema != "" {
+			return runOptions{}, fmt.Errorf("%s cannot be used with --schema", flagName)
+		}
+	}
+
 	if opts.jsonSchema != "" {
 		if opts.prompt == "" {
 			return runOptions{}, fmt.Errorf("--schema requires -p")
@@ -223,6 +242,17 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	}
 
 	return opts, nil
+}
+
+// streamFlagName names whichever streaming flag is set, or "" if none.
+func streamFlagName(opts runOptions) string {
+	switch {
+	case opts.eventsJSONL:
+		return "--events-jsonl"
+	case opts.stream:
+		return "--stream"
+	}
+	return ""
 }
 
 // applyAgentArg resolves the --agent value: if it is a .md path, the file's

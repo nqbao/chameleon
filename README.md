@@ -150,6 +150,41 @@ Use `Options.HostSpec`, `DockerSpec`, and `SandboxSpec` with the exported
 runtime command builders and output parsers. `cli.Main(ctx, args, cli.IO{...})`
 embeds the run CLI.
 
+## Streaming output
+
+`cham run -p ... --stream` prints the response as it is produced (stdout) and
+tool calls as they happen (stderr), instead of everything at the end.
+
+`--events-jsonl` writes one JSON object per line to stdout, for programs that
+consume the run:
+
+```jsonl
+{"type":"text","content":"Checking the code…"}
+{"type":"tool","name":"Read","detail":"src/main.py"}
+{"type":"done","session_id":"abc123"}
+```
+
+| type       | fields                         | meaning                                  |
+|------------|--------------------------------|------------------------------------------|
+| `text`     | `content`                      | a piece of the response                  |
+| `thinking` | `content`                      | reasoning text, when the runtime has it  |
+| `tool`     | `name`, `detail`               | a tool call started                      |
+| `done`     | `session_id` (may be absent)   | success; always the last line            |
+| `error`    | `message`, `exit_code`         | failure; always the last line            |
+
+stdout carries only these lines; diagnostics go to stderr. A runtime that does
+not stream emits its final answer as a single `text` event before `done`.
+Fields may be added in future; existing types and fields will not change.
+Consecutive assistant messages are separated by a newline in `text` content;
+token deltas within a message are not. When the agent fails, the `error` event
+carries the agent's own output in `content` unless it was already streamed.
+Errors found while preparing the run (bad `--env-file`, ...) also end with an
+`error` event; argument usage errors (exit 2) are reported on stderr only. A
+failed stdout write makes the run exit 1.
+
+Both flags require `-p` and cannot be combined with `--schema`, `--setup` or
+`--shell`; `--stream` and `--events-jsonl` are mutually exclusive.
+
 ## Environment variables for the agent
 
 Extra variables reach the agent process in every environment (host, sandbox and

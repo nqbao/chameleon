@@ -57,6 +57,7 @@ type AgentCommandContext struct {
 	MCPServers       map[string]MCPServer   // MCP servers to expose to the agent; runtimes without MCP support return an error when set
 	OutputFormat     string                 // desired output format ("text", "json", ...); empty means runtime default (stream-json for claude)
 	JSONSchema       string                 // raw JSON schema string; if set, requests structured output matching this schema
+	Stream           bool                   // caller will read ParseStreamLine events; runtimes may emit finer-grained output (claude: partial messages)
 }
 
 type AgentCommand struct {

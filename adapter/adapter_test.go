@@ -3,6 +3,7 @@ package adapter
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -114,6 +115,45 @@ func TestClaudeParseStreamLine(t *testing.T) {
 	}
 }
 
+func TestClaudeParseStreamPartial(t *testing.T) {
+	rt := &ClaudeRuntime{}
+	var got []StreamEvent
+	for _, l := range []string{
+		`{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"h"}}}`,
+		`{"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Check"}}}`,
+		`{"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ing"}}}`,
+		`{"type":"stream_event","event":{"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":"{"}}}`,
+		`{"type":"stream_event","event":{"type":"message_stop"}}`,
+		`{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"h"},{"type":"text","text":"Checking"},{"type":"tool_use","name":"Read","input":{"file_path":"a.go"}}]}}`,
+	} {
+		got = append(got, rt.ParseStreamLine([]byte(l))...)
+	}
+	want := []StreamEvent{
+		{Type: "thinking", Content: "h"},
+		{Type: "chunk", Content: "Check"},
+		{Type: "chunk", Content: "ing"},
+		{Type: "message", Content: "Checking"},
+		{Type: "toolCall", Name: "Read", Detail: "a.go"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v\nwant %+v", got, want)
+	}
+}
+
+func TestClaudeStreamFlag(t *testing.T) {
+	cmd, err := (&ClaudeRuntime{}).BuildCommand(AgentCommandContext{Prompt: "x", Stream: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strings.Join(cmd.Args, " "), "--include-partial-messages") {
+		t.Errorf("args = %v", cmd.Args)
+	}
+	cmd, _ = (&ClaudeRuntime{}).BuildCommand(AgentCommandContext{Prompt: "x"})
+	if strings.Contains(strings.Join(cmd.Args, " "), "--include-partial-messages") {
+		t.Errorf("unexpected partial flag: %v", cmd.Args)
+	}
+}
+
 func TestCodexParseOutput(t *testing.T) {
 	out := `{"type":"thread.started","thread_id":"t1"}
 {"type":"item.started","item":{"type":"agent_message","text":"ignored"}}
@@ -189,5 +229,13 @@ func TestCredentialProvidersByName(t *testing.T) {
 	}
 	if len(CredentialProvidersByName(nil)) != 0 {
 		t.Error("nil names must yield no providers")
+	}
+}
+
+func TestOpenCodeParseStreamLineMessageBoundary(t *testing.T) {
+	got := (&OpenCodeRuntime{}).ParseStreamLine([]byte(`{"type":"text","part":{"type":"text","text":"hi"}}`))
+	want := []StreamEvent{{Type: "chunk", Content: "hi"}, {Type: "message", Content: "hi"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %+v want %+v", got, want)
 	}
 }

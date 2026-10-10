@@ -8,7 +8,12 @@ import (
 	"github.com/nqbao/chameleon/environment"
 )
 
-type ClaudeRuntime struct{}
+// ClaudeRuntime parses stream-json. With partial messages on, text and thinking
+// arrive as stream_event deltas and are then repeated by the completed assistant
+// event; the seen* fields (set while parsing one run) suppress that repeat.
+type ClaudeRuntime struct {
+	seenTextDelta, seenThinkingDelta bool
+}
 
 func (a *ClaudeRuntime) Name() string        { return "claude" }
 func (a *ClaudeRuntime) DisplayName() string { return "Claude" }
@@ -68,6 +73,9 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 	args := []string{"--output-format", outFmt}
 	if outFmt == "stream-json" {
 		args = append(args, "--verbose")
+		if ctx.Stream {
+			args = append(args, "--include-partial-messages")
+		}
 	}
 	if ctx.SessionID != "" {
 		args = append(args, "--resume", ctx.SessionID)
@@ -191,7 +199,15 @@ func (a *ClaudeRuntime) ParseOutput(output []byte) (AgentResult, error) {
 
 func (a *ClaudeRuntime) ParseStreamLine(line []byte) []StreamEvent {
 	var event struct {
-		Type    string `json:"type"`
+		Type  string `json:"type"`
+		Event *struct {
+			Type  string `json:"type"`
+			Delta struct {
+				Type     string `json:"type"`
+				Text     string `json:"text"`
+				Thinking string `json:"thinking"`
+			} `json:"delta"`
+		} `json:"event"`
 		Message *struct {
 			Content []struct {
 				Type     string          `json:"type"`
@@ -202,7 +218,25 @@ func (a *ClaudeRuntime) ParseStreamLine(line []byte) []StreamEvent {
 			} `json:"content"`
 		} `json:"message"`
 	}
-	if json.Unmarshal(line, &event) != nil || event.Type != "assistant" || event.Message == nil {
+	if json.Unmarshal(line, &event) != nil {
+		return nil
+	}
+	if event.Type == "stream_event" && event.Event != nil && event.Event.Type == "content_block_delta" {
+		switch d := event.Event.Delta; d.Type {
+		case "text_delta":
+			if d.Text != "" {
+				a.seenTextDelta = true
+				return []StreamEvent{{Type: "chunk", Content: d.Text}}
+			}
+		case "thinking_delta":
+			if d.Thinking != "" {
+				a.seenThinkingDelta = true
+				return []StreamEvent{{Type: "thinking", Content: d.Thinking}}
+			}
+		}
+		return nil
+	}
+	if event.Type != "assistant" || event.Message == nil {
 		return nil
 	}
 	var events []StreamEvent
@@ -219,10 +253,12 @@ func (a *ClaudeRuntime) ParseStreamLine(line []byte) []StreamEvent {
 		case "text":
 			if part.Text != "" {
 				textParts = append(textParts, part.Text)
-				events = append(events, StreamEvent{Type: "chunk", Content: part.Text})
+				if !a.seenTextDelta {
+					events = append(events, StreamEvent{Type: "chunk", Content: part.Text})
+				}
 			}
 		case "thinking":
-			if part.Thinking != "" {
+			if part.Thinking != "" && !a.seenThinkingDelta {
 				events = append(events, StreamEvent{Type: "thinking", Content: part.Thinking})
 			}
 		case "tool_use":
