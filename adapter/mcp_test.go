@@ -192,7 +192,7 @@ func TestOpenCodeMCPEnv(t *testing.T) {
 
 func TestMCPUnsupportedRuntimes(t *testing.T) {
 	servers := mustParseMCP(t, `{"mcpServers": {"a": {"command": "x"}}}`)
-	for _, rt := range []AgentRuntime{&PiRuntime{}, &ShellRuntime{}} {
+	for _, rt := range []AgentRuntime{&ShellRuntime{}} {
 		cmd, err := rt.BuildCommand(AgentCommandContext{Prompt: "true", MCPServers: servers})
 		if err == nil || !strings.Contains(err.Error(), "MCP") {
 			t.Errorf("%s: err = %v", rt.Name(), err)
@@ -200,5 +200,57 @@ func TestMCPUnsupportedRuntimes(t *testing.T) {
 		for _, p := range cmd.TempFiles {
 			os.Remove(p)
 		}
+	}
+}
+
+func TestPiMCPCommand(t *testing.T) {
+	servers := mustParseMCP(t, mcpFixture)
+	for _, interactive := range []bool{false, true} {
+		cmd, err := (&PiRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", Interactive: interactive, MCPServers: servers})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			for _, p := range cmd.TempFiles {
+				os.Remove(p)
+			}
+		}()
+		if len(cmd.TempFiles) != 2 || len(cmd.TempMounts) != 2 {
+			t.Fatalf("interactive=%v: temp files = %v mounts = %v", interactive, cmd.TempFiles, cmd.TempMounts)
+		}
+		mcpPath := cmd.TempFiles[1]
+		var exts []string
+		for i, a := range cmd.Args {
+			if a == "--extension" {
+				exts = append(exts, cmd.Args[i+1])
+			}
+		}
+		if !reflect.DeepEqual(exts, cmd.TempFiles) {
+			t.Errorf("--extension args = %v, want %v", exts, cmd.TempFiles)
+		}
+		info, err := os.Stat(mcpPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Errorf("mcp extension mode = %v, want 0600", info.Mode().Perm())
+		}
+		src, _ := os.ReadFile(mcpPath)
+		for _, want := range []string{`"exposure":"direct"`, `"command":"npx"`, `"TOKEN":"${TOKEN}"`, `"url":"https://example.com/mcp"`, "registerMcpServer"} {
+			if !strings.Contains(string(src), want) {
+				t.Errorf("extension missing %s:\n%s", want, src)
+			}
+		}
+	}
+	cmd, err := (&PiRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi"})
+	if err != nil || len(cmd.TempFiles) != 1 {
+		t.Errorf("no servers: err=%v temp=%v", err, cmd.TempFiles)
+	}
+	for _, p := range cmd.TempFiles {
+		os.Remove(p)
+	}
+	sse := mustParseMCP(t, `{"mcpServers": {"a": {"url": "http://x", "type": "sse"}}}`)
+	if _, err := (&PiRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", MCPServers: sse}); err == nil {
+		t.Error("sse: expected error")
 	}
 }

@@ -104,7 +104,8 @@ translates the file for the runtime:
 | `claude` | temp file via `--mcp-config` | expanded by Claude |
 | `codex` | `-c mcp_servers.<name>.*` overrides | whole values only (`env_vars`, `env_http_headers`, `bearer_token_env_var`); no `sse` |
 | `opencode` | `OPENCODE_CONFIG_CONTENT`, merged over your config | converted to `{env:NAME}` |
-| `pi`, `shell` | not supported; the run fails | |
+| `pi` | generated extension calling `pi.registerMcpServer` (Pi 0.99 or newer; tools exposed directly, no `sse`) | expanded by Pi |
+| `shell` | not supported; the run fails | |
 
 Put the variables a server needs in the agent environment with `--env` / `--env-file`.
 Literal secrets in the file reach Codex as command-line arguments, visible in `ps`;

@@ -25,8 +25,12 @@ func (a *PiRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) 
 	if ctx.JSONSchema != "" && !ctx.Interactive {
 		return AgentCommand{}, fmt.Errorf("pi does not support --schema")
 	}
-	if err := mcpUnsupported("pi", ctx.MCPServers); err != nil {
-		return AgentCommand{}, err
+	var mcpExt []byte
+	if len(ctx.MCPServers) > 0 {
+		var err error
+		if mcpExt, err = piMCPExtension(ctx.MCPServers); err != nil {
+			return AgentCommand{}, err
+		}
 	}
 	gate, err := os.CreateTemp("", "cham-pi-gate-*.ts")
 	if err != nil {
@@ -51,8 +55,20 @@ func (a *PiRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) 
 	}
 	tempFiles := []string{gatePath}
 	tempMounts := []string{gatePath + ":" + gatePath + ":ro"}
+	extArgs := []string{"--extension", gatePath}
+	if mcpExt != nil {
+		// May hold literal secrets from --mcp-config, so unlike the gate it stays owner-only.
+		mcpPath, err := writeTempFile("cham-pi-mcp-*.ts", mcpExt, 0o600)
+		if err != nil {
+			_ = os.Remove(gatePath)
+			return AgentCommand{}, fmt.Errorf("pi MCP extension: %w", err)
+		}
+		tempFiles = append(tempFiles, mcpPath)
+		tempMounts = append(tempMounts, mcpPath+":"+mcpPath+":ro")
+		extArgs = append(extArgs, "--extension", mcpPath)
+	}
 	if ctx.Interactive {
-		args := []string{"--extension", gatePath}
+		args := append([]string{}, extArgs...)
 		if ctx.Model != "" {
 			args = append(args, "--model", ctx.Model)
 		}
@@ -67,7 +83,7 @@ func (a *PiRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) 
 		}
 		return AgentCommand{Name: "pi", Args: args, TempFiles: tempFiles, TempMounts: tempMounts}, nil
 	}
-	args := []string{"--mode", "json", "--extension", gatePath}
+	args := append([]string{"--mode", "json"}, extArgs...)
 	if ctx.Model != "" {
 		args = append(args, "--model", ctx.Model)
 	}
