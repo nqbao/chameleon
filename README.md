@@ -10,7 +10,7 @@ This checkout has not been published or versioned.
 
 Requires Go 1.26.2 or newer. The runtime you select must be installed on the host
 or in the selected Docker image. Supported runtimes are `claude`, `codex`,
-`gemini`, `opencode`, `pi`, and `shell`.
+`opencode`, `pi`, and `shell`.
 
 ```sh
 make build
@@ -27,7 +27,7 @@ files use the body as the user prompt. CLI flags override frontmatter. `${name}`
 is required, `${name:-default}` supplies a default, and `$$` escapes a dollar sign.
 The `runfile` package also supports `@path` values for file content substitution.
 
-`--sandbox` uses native agent settings for Claude, Codex, and Gemini. For Pi,
+`--sandbox` uses native agent settings for Claude and Codex. For Pi,
 OpenCode, and shell it uses macOS `sandbox-exec`. `--sandbox-no-network` applies
 only to the latter group. Docker and sandbox flags are mutually exclusive.
 

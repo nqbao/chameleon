@@ -9,7 +9,7 @@ import (
 func TestAgentRuntimeFor(t *testing.T) {
 	for input, want := range map[string]string{
 		"claude": "claude", " Claude ": "claude", "codex": "codex", "oc": "opencode",
-		"open-code": "opencode", "gemini": "gemini", "pi": "pi", "shell": "shell",
+		"open-code": "opencode", "pi": "pi", "shell": "shell",
 	} {
 		rt, err := AgentRuntimeFor(input)
 		if err != nil {

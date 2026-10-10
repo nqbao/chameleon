@@ -121,7 +121,7 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		}
 	case Sandbox:
 		switch adapter.NormalizeChatRuntime(req.Runtime) {
-		case "codex", "gemini", "claude":
+		case "codex", "claude":
 			spec, err = o.HostSpec(ws, nil)
 			newEnv = func(s environment.EnvironmentSpec) environment.Environment { return environment.NewHostEnvironment(s) }
 			if req.NoNetwork && req.Stderr != nil {

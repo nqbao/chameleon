@@ -34,8 +34,8 @@ func validateEnvironment(runtime, environment, environmentImage string, baseEnv 
 			if _, err := envpkg.LookPath("sandbox-exec", baseEnv); err != nil {
 				return fmt.Errorf("sandbox-exec not found in PATH: %w", err)
 			}
-		case "codex", "gemini", "claude":
-			// codex/gemini use native sandbox flags; claude uses --settings JSON
+		case "codex", "claude":
+			// codex uses native sandbox flags; claude uses --settings JSON
 		default:
 			return fmt.Errorf("%s is not supported with the sandbox environment", runtime)
 		}

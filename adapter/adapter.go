@@ -46,7 +46,7 @@ type AgentCommandContext struct {
 	Sandbox      bool
 	ExtraArgs    []string
 	// Tools is an allowlist of tool names available to the agent. Empty means all tools.
-	// Supported: Claude (--allowedTools), Pi (--tools), Gemini (--allowed-tools, deprecated flag).
+	// Supported: Claude (--allowedTools), Pi (--tools).
 	// Not supported by Codex or OpenCode (no per-invocation tool filtering available).
 	Tools            []string
 	ProviderSettings map[string]interface{} // merged into --settings JSON for runtimes that support it (claude)
@@ -92,8 +92,6 @@ func AgentRuntimeFor(runtime string) (AgentRuntime, error) {
 		return &CodexRuntime{}, nil
 	case "opencode":
 		return &OpenCodeRuntime{}, nil
-	case "gemini":
-		return &GeminiRuntime{}, nil
 	case "pi":
 		return &PiRuntime{}, nil
 	case "shell":
@@ -172,8 +170,6 @@ func normalizeChatRuntime(r string) string {
 		return "codex"
 	case "opencode", "open-code", "oc":
 		return "opencode"
-	case "gemini":
-		return "gemini"
 	case "pi":
 		return "pi"
 	case "shell":

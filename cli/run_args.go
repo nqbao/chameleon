@@ -49,7 +49,7 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	fs.StringVar(&opts.dockerSocket, "docker-socket", os.Getenv("CHAMELEON_DOCKER_SOCKET"), "docker socket path (e.g. unix:///var/run/docker.sock); empty uses docker's default")
 	var dockerArgsFlag string
 	fs.StringVar(&dockerArgsFlag, "docker-args", "", "extra `docker run` flags, shell-quoted (e.g. \"--network=host -v /a:/b\"); requires --docker")
-	fs.BoolVar(&opts.sandboxMode, "sandbox", false, "enable sandbox (codex/gemini: native --sandbox flag; pi/opencode: macOS sandbox-exec)")
+	fs.BoolVar(&opts.sandboxMode, "sandbox", false, "enable sandbox (claude/codex: native sandbox settings; pi/opencode: macOS sandbox-exec)")
 	fs.BoolVar(&opts.sandboxNoNetwork, "sandbox-no-network", false, "deny outbound network inside sandbox (default: allow)")
 	fs.StringVar(&opts.prompt, "p", "", "prompt (if omitted, runs agent interactively, passing remaining args through)")
 	fs.BoolVar(&opts.setup, "setup", false, "run the agent's setup/login command instead")
