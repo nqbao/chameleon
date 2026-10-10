@@ -52,8 +52,9 @@ Agent CLIs are launched with an argument list, never through a shell (the `shell
 runtime runs the prompt as a command by design). Values that could be parsed as
 flags are guarded in `Run`: a model, session, tool, file, image, docker image or
 docker socket starting with `-` is rejected, and a prompt or system prompt starting
-with `-` is prefixed with a space. `ExtraArgs` and `--docker-args` are
-pass-through by design.
+with `-` is prefixed with a space. `ExtraArgs` (positionals after the flags, or after `--`) and
+`--docker-args` are pass-through by design. Extra args are appended after the prompt
+in both interactive and `-p` runs, e.g. `cham run --agent claude -p 'hi' -- --max-turns 3`.
 
 ## Configuration
 

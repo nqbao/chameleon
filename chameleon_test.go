@@ -154,3 +154,22 @@ func TestRunOpenCodeMCPMergesInlineConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExtraArgsReachNonInteractiveAgent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs /bin/sh")
+	}
+	bin := t.TempDir()
+	script := "#!/bin/sh\nfor a in \"$@\"; do echo \"ARG:$a\"; done\n"
+	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	options := cham.Options{BaseEnv: []string{"PATH=" + bin + ":/usr/bin:/bin"}}
+	result, err := options.Run(context.Background(), cham.Request{Runtime: "claude", Dir: t.TempDir(), Prompt: "hello", ExtraArgs: []string{"--max-turns", "3"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.RawOutput, "ARG:--max-turns\nARG:3") || !strings.Contains(result.RawOutput, "ARG:hello\nARG:--max-turns") {
+		t.Fatalf("extra args must follow the prompt, got:\n%s", result.RawOutput)
+	}
+}

@@ -170,9 +170,8 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		if err != nil {
 			return fail(err)
 		}
-		if interactive {
-			cmd.Args = append(cmd.Args, req.ExtraArgs...)
-		}
+		// Appended in every mode, after the prompt: agent CLIs accept flags there.
+		cmd.Args = append(cmd.Args, req.ExtraArgs...)
 	}
 	defer func() {
 		for _, p := range cmd.TempFiles {
