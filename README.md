@@ -10,7 +10,7 @@ This checkout has not been published or versioned.
 
 Requires Go 1.26.2 or newer. The runtime you select must be installed on the host
 or in the selected Docker image. Supported runtimes are `claude`, `codex`,
-`gemini`, `opencode`, `pi`, and `shell`.
+`opencode`, `pi`, and `shell`.
 
 ```sh
 make build
@@ -27,7 +27,7 @@ files use the body as the user prompt. CLI flags override frontmatter. `${name}`
 is required, `${name:-default}` supplies a default, and `$$` escapes a dollar sign.
 The `runfile` package also supports `@path` values for file content substitution.
 
-`--sandbox` uses native agent settings for Claude, Codex, and Gemini. For Pi,
+`--sandbox` uses native agent settings for Claude and Codex. For Pi,
 OpenCode, and shell it uses macOS `sandbox-exec`. `--sandbox-no-network` applies
 only to the latter group. Docker and sandbox flags are mutually exclusive.
 
@@ -52,8 +52,9 @@ Agent CLIs are launched with an argument list, never through a shell (the `shell
 runtime runs the prompt as a command by design). Values that could be parsed as
 flags are guarded in `Run`: a model, session, tool, file, image, docker image or
 docker socket starting with `-` is rejected, and a prompt or system prompt starting
-with `-` is prefixed with a space. `ExtraArgs` and `--docker-args` are
-pass-through by design.
+with `-` is prefixed with a space. `ExtraArgs` (positionals after the flags, or after `--`) and
+`--docker-args` are pass-through by design. Extra args are appended after the prompt
+in both interactive and `-p` runs, e.g. `cham run --agent claude -p 'hi' -- --max-turns 3`.
 
 ## Configuration
 
@@ -80,6 +81,52 @@ The workspace file belongs to the repository the agent works on, and the agent c
 edit it. Flags such as `--privileged` or a Docker socket mount there remove
 container isolation, so `cham` prints the workspace flags it applies to stderr.
 Only run `--docker` in repositories you trust, or keep those flags in the user file.
+
+## MCP servers
+
+`--mcp-config servers.json` (repeatable; later files replace same-named servers)
+exposes MCP servers to the agent. The file uses the common `mcpServers` format:
+
+```json
+{"mcpServers": {
+  "fs":   {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/work"],
+           "env": {"API_KEY": "${API_KEY}"}},
+  "docs": {"url": "https://example.com/mcp",
+           "headers": {"Authorization": "Bearer ${DOCS_KEY}"}}
+}}
+```
+
+Each server has either `command` (stdio; optional `args`, `env`) or `url` (optional
+`type` of `http` or `sse`, and `headers`). Unknown fields are an error. Chameleon
+translates the file for the runtime:
+
+| Runtime | How it is passed | `${NAME}` references |
+|---|---|---|
+| `claude` | temp file via `--mcp-config` | expanded by Claude |
+| `codex` | `-c mcp_servers.<name>.*` overrides | whole values only (`env_vars`, `env_http_headers`, `bearer_token_env_var`); no `sse` |
+| `opencode` | `OPENCODE_CONFIG_CONTENT`, merged over your config and over any inline config already set | converted to `{env:NAME}` |
+| `pi` | generated extension calling `pi.registerMcpServer` (Pi 0.99 or newer; tools exposed directly, no `sse`) | expanded by Pi |
+| `shell` | not supported; the run fails | |
+
+Codex merges `-c` overrides into a same-named server from its own `config.toml`.
+Chameleon always sets `args` and `env_vars`, which Codex replaces, but `env`, headers and
+a `bearer_token_env_var` merge key by key and a stdio/http switch is rejected by Codex,
+so give servers names that your Codex config does not use. For OpenCode, an
+`OPENCODE_CONFIG_CONTENT` already in the environment (inherited, `--env` or
+`--env-file`) is kept: its other settings survive and servers from `--mcp-config`
+replace same-named ones under `mcp`. Malformed JSON there is an error.
+
+Put the variables a server needs in the agent environment with `--env` / `--env-file`.
+Literal secrets in the file reach Codex as command-line arguments, visible in `ps`;
+use `${NAME}` references instead. Generated Claude and Pi files live in a private
+(0700) temp directory but are mode 0644, so a container user with a different UID can
+read the mounted copy. Under `--docker` the commands in stdio servers must
+exist in the image, and a server on the host needs `host.docker.internal`, not
+`localhost`. `--sandbox-no-network` blocks remote servers.
+
+The file is trusted input: a stdio server runs its command as you. For that reason it
+is a flag (or `Request.MCPConfig`), not run-file frontmatter. Embedders must not fill
+it from untrusted input.
 
 ## Embed
 

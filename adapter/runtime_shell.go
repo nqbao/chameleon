@@ -25,6 +25,9 @@ func (a *ShellRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 	if ctx.JSONSchema != "" {
 		return AgentCommand{}, fmt.Errorf("shell does not support --schema")
 	}
+	if err := mcpUnsupported("shell", ctx.MCPServers); err != nil {
+		return AgentCommand{}, err
+	}
 	if ctx.Prompt == "" {
 		return AgentCommand{}, fmt.Errorf("shell runtime: prompt (command) must not be empty")
 	}

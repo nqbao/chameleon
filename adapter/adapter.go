@@ -45,11 +45,16 @@ type AgentCommandContext struct {
 	Interactive  bool
 	Sandbox      bool
 	ExtraArgs    []string
+	// Env is the environment the agent will see (inherited, then workspace
+	// secrets and --env; a later entry wins). Runtimes read it to fold existing
+	// values into what they generate.
+	Env []string
 	// Tools is an allowlist of tool names available to the agent. Empty means all tools.
-	// Supported: Claude (--allowedTools), Pi (--tools), Gemini (--allowed-tools, deprecated flag).
+	// Supported: Claude (--allowedTools), Pi (--tools).
 	// Not supported by Codex or OpenCode (no per-invocation tool filtering available).
 	Tools            []string
 	ProviderSettings map[string]interface{} // merged into --settings JSON for runtimes that support it (claude)
+	MCPServers       map[string]MCPServer   // MCP servers to expose to the agent; runtimes without MCP support return an error when set
 	OutputFormat     string                 // desired output format ("text", "json", ...); empty means runtime default (stream-json for claude)
 	JSONSchema       string                 // raw JSON schema string; if set, requests structured output matching this schema
 }
@@ -59,6 +64,7 @@ type AgentCommand struct {
 	Args       []string
 	Env        []string
 	UnsetEnv   []string // env var names to strip from the inherited environment
+	MergedEnv  []string // names in Env whose value already includes the caller-supplied one, so it must not override it
 	OutputFile string   // if non-empty, read structured output from this file after exec (Codex)
 	TempFiles  []string // temporary files to remove after exec
 	TempMounts []string // extra Docker volume mounts for temp files; "hostPath:containerPath" format
@@ -92,8 +98,6 @@ func AgentRuntimeFor(runtime string) (AgentRuntime, error) {
 		return &CodexRuntime{}, nil
 	case "opencode":
 		return &OpenCodeRuntime{}, nil
-	case "gemini":
-		return &GeminiRuntime{}, nil
 	case "pi":
 		return &PiRuntime{}, nil
 	case "shell":
@@ -172,8 +176,6 @@ func normalizeChatRuntime(r string) string {
 		return "codex"
 	case "opencode", "open-code", "oc":
 		return "opencode"
-	case "gemini":
-		return "gemini"
 	case "pi":
 		return "pi"
 	case "shell":

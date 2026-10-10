@@ -31,6 +31,7 @@ type runOptions struct {
 	extraArgs        []string
 	envFiles         []string
 	envFlags         []string
+	mcpConfig        []string
 }
 
 func parseRunArgs(args []string) (runOptions, error) { return parseRunArgsIO(args, io.Discard) }
@@ -49,14 +50,15 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	fs.StringVar(&opts.dockerSocket, "docker-socket", os.Getenv("CHAMELEON_DOCKER_SOCKET"), "docker socket path (e.g. unix:///var/run/docker.sock); empty uses docker's default")
 	var dockerArgsFlag string
 	fs.StringVar(&dockerArgsFlag, "docker-args", "", "extra `docker run` flags, shell-quoted (e.g. \"--network=host -v /a:/b\"); requires --docker")
-	fs.BoolVar(&opts.sandboxMode, "sandbox", false, "enable sandbox (codex/gemini: native --sandbox flag; pi/opencode: macOS sandbox-exec)")
+	fs.BoolVar(&opts.sandboxMode, "sandbox", false, "enable sandbox (claude/codex: native sandbox settings; pi/opencode: macOS sandbox-exec)")
 	fs.BoolVar(&opts.sandboxNoNetwork, "sandbox-no-network", false, "deny outbound network inside sandbox (default: allow)")
-	fs.StringVar(&opts.prompt, "p", "", "prompt (if omitted, runs agent interactively, passing remaining args through)")
+	fs.StringVar(&opts.prompt, "p", "", "prompt (if omitted, runs agent interactively); remaining args are passed through to the agent CLI")
 	fs.BoolVar(&opts.setup, "setup", false, "run the agent's setup/login command instead")
 	fs.StringVar(&opts.shell, "shell", "", "open a shell instead of running the agent, e.g. /bin/bash (docker mode only; defaults to /bin/sh)")
 	fs.StringVar(&opts.jsonSchema, "schema", "", "JSON schema for structured output; inline JSON or path to a .json file (requires -p)")
 	fs.Var((*repeatedFlag)(&opts.envFiles), "env-file", "file of NAME=value lines injected into the agent's environment; repeatable")
 	fs.Var((*repeatedFlag)(&opts.envFlags), "env", "NAME=value (or NAME to copy from the current environment) injected into the agent's environment; repeatable")
+	fs.Var((*repeatedFlag)(&opts.mcpConfig), "mcp-config", "JSON file of MCP servers ({\"mcpServers\": {...}}) to expose to the agent; repeatable; not supported by the shell runtime")
 	var toolsFlag string
 	fs.StringVar(&toolsFlag, "tools", "", "comma-separated allowlist of tool names (e.g. \"Read,Edit,Bash(git *)\")")
 

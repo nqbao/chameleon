@@ -11,7 +11,6 @@ var (
 	ClaudeCredentials   environment.CredentialProvider = &claudeCredProvider{}
 	CodexCredentials    environment.CredentialProvider = &codexCredProvider{}
 	OpenCodeCredentials environment.CredentialProvider = &opencodeCredProvider{}
-	GeminiCredentials   environment.CredentialProvider = &geminiCredProvider{}
 	PiCredentials       environment.CredentialProvider = &piCredProvider{}
 )
 
@@ -20,7 +19,6 @@ var AllCredentialProviders = []environment.CredentialProvider{
 	ClaudeCredentials,
 	CodexCredentials,
 	OpenCodeCredentials,
-	GeminiCredentials,
 	PiCredentials,
 }
 
@@ -49,8 +47,6 @@ func CredentialProvidersByName(names []string) []environment.CredentialProvider 
 			add(OpenCodeCredentials)
 		case "pi":
 			add(PiCredentials)
-		case "gemini":
-			add(GeminiCredentials)
 		}
 	}
 	return out
@@ -87,14 +83,6 @@ func (p *opencodeCredProvider) Dirs() []environment.CredDir {
 func (p *opencodeCredProvider) EnvVars() []string {
 	return []string{"OPENAI_API_KEY", "ANTHROPIC_API_KEY"}
 }
-
-type geminiCredProvider struct{}
-
-func (p *geminiCredProvider) Name() string { return "gemini" }
-func (p *geminiCredProvider) Dirs() []environment.CredDir {
-	return []environment.CredDir{{HomeRelPath: ".gemini", DockerRelPath: "gemini", IsDir: true}}
-}
-func (p *geminiCredProvider) EnvVars() []string { return []string{"GEMINI_API_KEY", "GOOGLE_API_KEY"} }
 
 type piCredProvider struct{}
 

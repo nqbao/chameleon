@@ -59,6 +59,7 @@ type Request struct {
 	NoNetwork, Yolo, Interactive, Setup             bool
 	Shell, JSONSchema                               string
 	Tools, ExtraArgs, Files, Images                 []string
+	MCPConfig                                       []string // paths to {"mcpServers": {...}} JSON files, merged in order; trusted input: stdio servers run commands as the agent's user
 	EnvVars                                         []string // extra NAME=value pairs for the agent process; override workspace secrets; every environment kind
 	Stdin                                           io.Reader
 	Stdout, Stderr                                  io.Writer
@@ -103,6 +104,10 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 	if err != nil {
 		return fail(err)
 	}
+	mcpServers, err := adapter.LoadMCPConfigs(req.MCPConfig)
+	if err != nil {
+		return fail(err)
+	}
 	ws := Workspace{Path: req.Dir}
 	if err := validateEnvVars(req.EnvVars); err != nil {
 		return fail(err)
@@ -121,7 +126,7 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		}
 	case Sandbox:
 		switch adapter.NormalizeChatRuntime(req.Runtime) {
-		case "codex", "gemini", "claude":
+		case "codex", "claude":
 			spec, err = o.HostSpec(ws, nil)
 			newEnv = func(s environment.EnvironmentSpec) environment.Environment { return environment.NewHostEnvironment(s) }
 			if req.NoNetwork && req.Stderr != nil {
@@ -141,7 +146,6 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		return fail(err)
 	}
 	spec.SecretEnv = mergeEnvVars(spec.SecretEnv, req.EnvVars)
-	env := newEnv(spec)
 	workspaceDir := req.Dir
 	if kind == Docker {
 		workspaceDir = environment.ContainerWorkspaceDir(ws)
@@ -162,19 +166,22 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		cmd.Name = argv[0]
 		cmd.Args = argv[1:]
 	default:
-		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images})
+		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images, MCPServers: mcpServers, Env: agentEnv(kind, spec)})
 		if err != nil {
 			return fail(err)
 		}
-		if interactive {
-			cmd.Args = append(cmd.Args, req.ExtraArgs...)
-		}
+		// Appended in every mode, after the prompt: agent CLIs accept flags there.
+		cmd.Args = append(cmd.Args, req.ExtraArgs...)
 	}
 	defer func() {
 		for _, p := range cmd.TempFiles {
 			_ = os.Remove(p)
 		}
 	}()
+	// Secrets are applied over the command's own environment, so a value the
+	// adapter already merged would be overridden by the unmerged original.
+	spec.SecretEnv = withoutEnvNames(spec.SecretEnv, cmd.MergedEnv)
+	env := newEnv(spec)
 	execution, err := env.Launch(ctx, environment.LaunchSpec{Argv: append([]string{cmd.Name}, cmd.Args...), Env: cmd.Env, UnsetEnv: cmd.UnsetEnv, Interactive: interactive, MergeStderr: true, ExtraVolumes: cmd.TempMounts, Stdin: req.Stdin, Stdout: req.Stdout, Stderr: req.Stderr})
 	if err != nil {
 		return fail(err)
@@ -281,6 +288,7 @@ func guardArgs(req *Request) error {
 		{"tool", req.Tools},
 		{"file", req.Files},
 		{"image", req.Images},
+		{"MCP config", req.MCPConfig},
 		{"docker socket", []string{req.DockerSocket}},
 	} {
 		if err := check(c.kind, c.values...); err != nil {
@@ -336,6 +344,33 @@ func mergeEnvVars(base, extra []string) []string {
 	out := make([]string, 0, len(all))
 	for i, kv := range all {
 		if name, _, _ := strings.Cut(kv, "="); last[name] == i {
+			out = append(out, kv)
+		}
+	}
+	return out
+}
+
+// agentEnv is the environment the agent process will see, lowest precedence first.
+// Docker containers do not inherit the host environment.
+func agentEnv(kind EnvKind, spec environment.EnvironmentSpec) []string {
+	if kind == Docker {
+		return append([]string{}, spec.SecretEnv...)
+	}
+	return append(append([]string{}, spec.BaseEnv...), spec.SecretEnv...)
+}
+
+// withoutEnvNames returns env without the NAME=value entries for the given names.
+func withoutEnvNames(env, names []string) []string {
+	if len(names) == 0 {
+		return env
+	}
+	drop := make(map[string]bool, len(names))
+	for _, n := range names {
+		drop[n] = true
+	}
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		if name, _, _ := strings.Cut(kv, "="); !drop[name] {
 			out = append(out, kv)
 		}
 	}

@@ -25,6 +25,21 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 	}
 	// ctx.Tools is intentionally not wired: opencode run has no tool filtering flag
 	// as of the time of writing.
+	var mcpEnv, mergedEnv []string
+	if len(ctx.MCPServers) > 0 {
+		cfg, err := opencodeMCPConfig(ctx.MCPServers)
+		if err != nil {
+			return AgentCommand{}, fmt.Errorf("marshal MCP config: %w", err)
+		}
+		// OpenCode merges inline config over its files, but the variable itself is
+		// replaced wholesale, so fold in any inline config the caller already set.
+		existing, _ := lastEnvValue(ctx.Env, "OPENCODE_CONFIG_CONTENT")
+		if cfg, err = mergeOpenCodeInline(existing, cfg); err != nil {
+			return AgentCommand{}, err
+		}
+		mcpEnv = []string{"OPENCODE_CONFIG_CONTENT=" + string(cfg)}
+		mergedEnv = []string{"OPENCODE_CONFIG_CONTENT"}
+	}
 	if ctx.Interactive {
 		var args []string
 		if ctx.SystemPrompt != "" {
@@ -40,9 +55,11 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 			args = append(args, "--dangerously-skip-permissions")
 		}
 		return AgentCommand{
-			Name:     "opencode",
-			Args:     args,
-			UnsetEnv: []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
+			Name:      "opencode",
+			Args:      args,
+			Env:       mcpEnv,
+			MergedEnv: mergedEnv,
+			UnsetEnv:  []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
 		}, nil
 	}
 	var args []string
@@ -67,10 +84,11 @@ func (a *OpenCodeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, e
 	}
 	args = append(args, ctx.Prompt)
 	return AgentCommand{
-		Name:     "opencode",
-		Args:     args,
-		Env:      []string{"NO_COLOR=1", "TERM=dumb"},
-		UnsetEnv: []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
+		Name:      "opencode",
+		Args:      args,
+		Env:       append([]string{"NO_COLOR=1", "TERM=dumb"}, mcpEnv...),
+		MergedEnv: mergedEnv,
+		UnsetEnv:  []string{"OPENCODE_SERVER_PASSWORD", "OPENCODE_SERVER_USERNAME"},
 	}, nil
 }
 

@@ -114,3 +114,62 @@ func TestRunRejectsInvalidEnvVars(t *testing.T) {
 		}
 	}
 }
+
+// A fake opencode that prints the inline config it was launched with.
+func fakeOpenCode(t *testing.T) string {
+	t.Helper()
+	bin := t.TempDir()
+	script := "#!/bin/sh\nprintf '%s' \"$OPENCODE_CONFIG_CONTENT\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "opencode"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return bin
+}
+
+func TestRunOpenCodeMCPMergesInlineConfig(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs /bin/sh")
+	}
+	bin := fakeOpenCode(t)
+	cfg := filepath.Join(t.TempDir(), "mcp.json")
+	if err := os.WriteFile(cfg, []byte(`{"mcpServers":{"fs":{"command":"npx"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, tc := range map[string]struct {
+		base, env []string
+		want      string
+	}{
+		"inherited": {base: []string{`OPENCODE_CONFIG_CONTENT={"model":"inherited"}`}, want: `"model":"inherited"`},
+		"--env":     {base: []string{`OPENCODE_CONFIG_CONTENT={"model":"inherited"}`}, env: []string{`OPENCODE_CONFIG_CONTENT={"model":"from-env"}`}, want: `"model":"from-env"`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			options := cham.Options{BaseEnv: append([]string{"PATH=" + bin + ":/usr/bin:/bin"}, tc.base...)}
+			result, err := options.Run(context.Background(), cham.Request{Runtime: "opencode", Dir: t.TempDir(), Prompt: "hi", MCPConfig: []string{cfg}, EnvVars: tc.env})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(result.RawOutput, tc.want) || !strings.Contains(result.RawOutput, `"fs"`) {
+				t.Fatalf("inline config = %s, want %s and the fs server", result.RawOutput, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunExtraArgsReachNonInteractiveAgent(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs /bin/sh")
+	}
+	bin := t.TempDir()
+	script := "#!/bin/sh\nfor a in \"$@\"; do echo \"ARG:$a\"; done\n"
+	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	options := cham.Options{BaseEnv: []string{"PATH=" + bin + ":/usr/bin:/bin"}}
+	result, err := options.Run(context.Background(), cham.Request{Runtime: "claude", Dir: t.TempDir(), Prompt: "hello", ExtraArgs: []string{"--max-turns", "3"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.RawOutput, "ARG:--max-turns\nARG:3") || !strings.Contains(result.RawOutput, "ARG:hello\nARG:--max-turns") {
+		t.Fatalf("extra args must follow the prompt, got:\n%s", result.RawOutput)
+	}
+}
