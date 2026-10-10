@@ -166,7 +166,7 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 		cmd.Name = argv[0]
 		cmd.Args = argv[1:]
 	default:
-		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images, MCPServers: mcpServers, Env: agentEnv(kind, spec)})
+		cmd, err = rt.BuildCommand(adapter.AgentCommandContext{Prompt: req.Prompt, SystemPrompt: req.SystemPrompt, WorkspaceDir: workspaceDir, SessionID: req.SessionID, Model: req.Model, Yolo: req.Yolo, Interactive: interactive, Sandbox: kind == Sandbox, ExtraArgs: req.ExtraArgs, JSONSchema: req.JSONSchema, Tools: req.Tools, Files: req.Files, Images: req.Images, MCPServers: mcpServers, Stream: req.OnStreamEvent != nil, Env: agentEnv(kind, spec)})
 		if err != nil {
 			return fail(err)
 		}
