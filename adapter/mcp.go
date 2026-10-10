@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -157,26 +158,37 @@ func claudeMCPJSON(servers map[string]MCPServer) ([]byte, error) {
 	return json.Marshal(map[string]any{"mcpServers": out})
 }
 
-// writeClaudeMCPConfig writes the config to a 0600 temp file and returns its path.
-func writeClaudeMCPConfig(servers map[string]MCPServer) (string, error) {
+// writeClaudeMCPConfig writes the config and returns the file plus every path to
+// remove afterwards (the file first, then its directory).
+func writeClaudeMCPConfig(servers map[string]MCPServer) (file string, cleanup []string, err error) {
 	data, err := claudeMCPJSON(servers)
 	if err != nil {
-		return "", fmt.Errorf("marshal MCP config: %w", err)
+		return "", nil, fmt.Errorf("marshal MCP config: %w", err)
 	}
-	f, err := os.CreateTemp("", "cham-mcp-*.json")
+	return writeMCPFile("cham-mcp.json", data)
+}
+
+// writeMCPFile stores data, which may hold literal credentials, in a new 0700
+// directory. The file itself is 0644 so a container user whose UID differs from
+// the host owner can still read the bind mount; other host users are kept out by
+// the directory. cleanup lists the file then its directory, ready for removal in
+// order.
+func writeMCPFile(name string, data []byte) (file string, cleanup []string, err error) {
+	dir, err := os.MkdirTemp("", "cham-mcp-*")
 	if err != nil {
-		return "", fmt.Errorf("create MCP config file: %w", err)
+		return "", nil, fmt.Errorf("create MCP config directory: %w", err)
 	}
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return "", fmt.Errorf("write MCP config file: %w", err)
+	file = filepath.Join(dir, name)
+	if err := os.WriteFile(file, data, 0o644); err != nil {
+		os.RemoveAll(dir)
+		return "", nil, fmt.Errorf("write MCP config file: %w", err)
 	}
-	if err := f.Close(); err != nil {
-		os.Remove(f.Name())
-		return "", fmt.Errorf("write MCP config file: %w", err)
+	// WriteFile is subject to the umask; make the mode explicit.
+	if err := os.Chmod(file, 0o644); err != nil {
+		os.RemoveAll(dir)
+		return "", nil, fmt.Errorf("write MCP config file: %w", err)
 	}
-	return f.Name(), nil
+	return file, []string{file, dir}, nil
 }
 
 // --- codex ---
@@ -243,10 +255,11 @@ func codexMCPArgs(servers map[string]MCPServer) ([]string, error) {
 			return nil, fmt.Errorf("MCP server %q: codex supports stdio and streamable http servers, not sse", name)
 		}
 		if !s.IsRemote() {
+			// Codex merges -c overrides into a same-named entry from config.toml:
+			// arrays replace but maps merge key by key, so always set the arrays to
+			// keep stale args and forwarded variables out.
 			set(name, "command", tomlString(s.Command))
-			if len(s.Args) > 0 {
-				set(name, "args", tomlStringArray(s.Args))
-			}
+			set(name, "args", tomlStringArray(s.Args))
 			literal := map[string]string{}
 			var forward []string
 			for k, v := range s.Env {
@@ -262,9 +275,7 @@ func codexMCPArgs(servers map[string]MCPServer) ([]string, error) {
 			if len(literal) > 0 {
 				set(name, "env", tomlInlineTable(literal))
 			}
-			if len(forward) > 0 {
-				set(name, "env_vars", tomlStringArray(forward))
-			}
+			set(name, "env_vars", tomlStringArray(forward))
 			continue
 		}
 		set(name, "url", tomlString(s.URL))
@@ -377,23 +388,48 @@ func piMCPExtension(servers map[string]MCPServer) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// writeTempFile writes data to a new temp file with the given mode.
-func writeTempFile(pattern string, data []byte, mode os.FileMode) (string, error) {
-	f, err := os.CreateTemp("", pattern)
+// mergeOpenCodeInline combines an existing OPENCODE_CONFIG_CONTENT document with
+// the generated MCP fragment. Every top-level setting of the existing document is
+// kept; its "mcp" servers are kept too, except that a server the caller passed
+// with --mcp-config replaces one of the same name.
+func mergeOpenCodeInline(existing string, generated []byte) ([]byte, error) {
+	if strings.TrimSpace(existing) == "" {
+		return generated, nil
+	}
+	var base map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(existing), &base); err != nil {
+		return nil, fmt.Errorf("OPENCODE_CONFIG_CONTENT is not a valid JSON object: %w", err)
+	}
+	var gen struct {
+		MCP map[string]json.RawMessage `json:"mcp"`
+	}
+	if err := json.Unmarshal(generated, &gen); err != nil {
+		return nil, err
+	}
+	servers := map[string]json.RawMessage{}
+	if raw, ok := base["mcp"]; ok {
+		if err := json.Unmarshal(raw, &servers); err != nil || servers == nil {
+			return nil, fmt.Errorf(`OPENCODE_CONFIG_CONTENT: "mcp" must be a JSON object`)
+		}
+	}
+	for name, raw := range gen.MCP {
+		servers[name] = raw
+	}
+	merged, err := json.Marshal(servers)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	path := f.Name()
-	_, err = f.Write(data)
-	if err == nil {
-		err = f.Chmod(mode)
+	base["mcp"] = merged
+	return json.Marshal(base)
+}
+
+// lastEnvValue returns the value of the last NAME=value entry for name.
+func lastEnvValue(env []string, name string) (string, bool) {
+	val, found := "", false
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, name+"="); ok {
+			val, found = v, true
+		}
 	}
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		os.Remove(path)
-		return "", err
-	}
-	return path, nil
+	return val, found
 }

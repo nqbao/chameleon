@@ -71,10 +71,14 @@ func TestClaudeMCPCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(cmd.TempFiles) != 1 {
-			t.Fatalf("interactive=%v: temp files = %v", interactive, cmd.TempFiles)
+		if len(cmd.TempFiles) != 2 || filepath.Dir(cmd.TempFiles[0]) != cmd.TempFiles[1] {
+			t.Fatalf("interactive=%v: want the file then its directory, got %v", interactive, cmd.TempFiles)
 		}
-		defer os.Remove(cmd.TempFiles[0])
+		defer func() {
+			os.Remove(cmd.TempFiles[0])
+			os.Remove(cmd.TempFiles[1])
+		}()
+		assertPrivateMCPFile(t, cmd.TempFiles[0], cmd.TempFiles[1])
 		if cmd.Args[0] != "--mcp-config="+cmd.TempFiles[0] {
 			t.Errorf("interactive=%v: args = %v", interactive, cmd.Args)
 		}
@@ -215,25 +219,19 @@ func TestPiMCPCommand(t *testing.T) {
 				os.Remove(p)
 			}
 		}()
-		if len(cmd.TempFiles) != 2 || len(cmd.TempMounts) != 2 {
+		if len(cmd.TempFiles) != 3 || len(cmd.TempMounts) != 2 {
 			t.Fatalf("interactive=%v: temp files = %v mounts = %v", interactive, cmd.TempFiles, cmd.TempMounts)
 		}
 		mcpPath := cmd.TempFiles[1]
+		assertPrivateMCPFile(t, mcpPath, cmd.TempFiles[2])
 		var exts []string
 		for i, a := range cmd.Args {
 			if a == "--extension" {
 				exts = append(exts, cmd.Args[i+1])
 			}
 		}
-		if !reflect.DeepEqual(exts, cmd.TempFiles) {
-			t.Errorf("--extension args = %v, want %v", exts, cmd.TempFiles)
-		}
-		info, err := os.Stat(mcpPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if info.Mode().Perm() != 0o600 {
-			t.Errorf("mcp extension mode = %v, want 0600", info.Mode().Perm())
+		if !reflect.DeepEqual(exts, cmd.TempFiles[:2]) {
+			t.Errorf("--extension args = %v, want %v", exts, cmd.TempFiles[:2])
 		}
 		src, _ := os.ReadFile(mcpPath)
 		for _, want := range []string{`"exposure":"direct"`, `"command":"npx"`, `"TOKEN":"${TOKEN}"`, `"url":"https://example.com/mcp"`, "registerMcpServer"} {
@@ -252,5 +250,99 @@ func TestPiMCPCommand(t *testing.T) {
 	sse := mustParseMCP(t, `{"mcpServers": {"a": {"url": "http://x", "type": "sse"}}}`)
 	if _, err := (&PiRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", MCPServers: sse}); err == nil {
 		t.Error("sse: expected error")
+	}
+}
+
+// assertPrivateMCPFile checks the file is readable by any container user while
+// the directory that holds it keeps other host users out.
+func assertPrivateMCPFile(t *testing.T, file, dir string) {
+	t.Helper()
+	fi, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	di, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0o644 {
+		t.Errorf("file mode = %v, want 0644 so a different container UID can read it", fi.Mode().Perm())
+	}
+	if di.Mode().Perm() != 0o700 {
+		t.Errorf("dir mode = %v, want 0700", di.Mode().Perm())
+	}
+}
+
+func TestCodexMCPArgsResetStaleArrays(t *testing.T) {
+	got, err := codexMCPArgs(mustParseMCP(t, `{"mcpServers": {"a": {"command": "x"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"-c", `mcp_servers.a.command="x"`,
+		"-c", `mcp_servers.a.args=[]`,
+		"-c", `mcp_servers.a.env_vars=[]`,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("args =\n%q\nwant\n%q", got, want)
+	}
+}
+
+func TestMergeOpenCodeInline(t *testing.T) {
+	gen := []byte(`{"mcp":{"fs":{"type":"local","command":["new"]}}}`)
+	got, err := mergeOpenCodeInline(`{"model":"custom/model","permission":"deny","mcp":{"fs":{"type":"local","command":["old"]},"keep":{"type":"remote","url":"http://k"}}}`, gen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(got, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if string(doc["model"]) != `"custom/model"` || string(doc["permission"]) != `"deny"` {
+		t.Errorf("existing settings lost: %s", got)
+	}
+	var servers map[string]struct {
+		Command []string `json:"command"`
+		URL     string   `json:"url"`
+	}
+	if err := json.Unmarshal(doc["mcp"], &servers); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(servers["fs"].Command, []string{"new"}) || servers["keep"].URL != "http://k" {
+		t.Errorf("mcp servers = %+v", servers)
+	}
+	if got, err := mergeOpenCodeInline("", gen); err != nil || string(got) != string(gen) {
+		t.Errorf("empty existing: %s %v", got, err)
+	}
+	for name, bad := range map[string]string{"not json": `nope`, "array": `[]`, "mcp not object": `{"mcp": 3}`} {
+		if _, err := mergeOpenCodeInline(bad, gen); err == nil {
+			t.Errorf("%s: expected error", name)
+		}
+	}
+}
+
+func TestOpenCodeMCPKeepsInlineConfigFromEnv(t *testing.T) {
+	servers := mustParseMCP(t, `{"mcpServers": {"fs": {"command": "x"}}}`)
+	cmd, err := (&OpenCodeRuntime{}).BuildCommand(AgentCommandContext{
+		Prompt: "hi", MCPServers: servers,
+		Env: []string{`OPENCODE_CONFIG_CONTENT={"model":"base"}`, `OPENCODE_CONFIG_CONTENT={"model":"override"}`},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	for _, kv := range cmd.Env {
+		if v, ok := strings.CutPrefix(kv, "OPENCODE_CONFIG_CONTENT="); ok {
+			raw = v
+		}
+	}
+	if !strings.Contains(raw, `"model":"override"`) || !strings.Contains(raw, `"fs"`) {
+		t.Errorf("merged = %s", raw)
+	}
+	if !reflect.DeepEqual(cmd.MergedEnv, []string{"OPENCODE_CONFIG_CONTENT"}) {
+		t.Errorf("MergedEnv = %v", cmd.MergedEnv)
+	}
+	if _, err := (&OpenCodeRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", MCPServers: servers, Env: []string{"OPENCODE_CONFIG_CONTENT=nope"}}); err == nil {
+		t.Error("malformed inline config: expected error")
 	}
 }

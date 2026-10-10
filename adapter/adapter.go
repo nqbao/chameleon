@@ -45,6 +45,10 @@ type AgentCommandContext struct {
 	Interactive  bool
 	Sandbox      bool
 	ExtraArgs    []string
+	// Env is the environment the agent will see (inherited, then workspace
+	// secrets and --env; a later entry wins). Runtimes read it to fold existing
+	// values into what they generate.
+	Env []string
 	// Tools is an allowlist of tool names available to the agent. Empty means all tools.
 	// Supported: Claude (--allowedTools), Pi (--tools).
 	// Not supported by Codex or OpenCode (no per-invocation tool filtering available).
@@ -60,6 +64,7 @@ type AgentCommand struct {
 	Args       []string
 	Env        []string
 	UnsetEnv   []string // env var names to strip from the inherited environment
+	MergedEnv  []string // names in Env whose value already includes the caller-supplied one, so it must not override it
 	OutputFile string   // if non-empty, read structured output from this file after exec (Codex)
 	TempFiles  []string // temporary files to remove after exec
 	TempMounts []string // extra Docker volume mounts for temp files; "hostPath:containerPath" format

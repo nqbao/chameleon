@@ -114,3 +114,43 @@ func TestRunRejectsInvalidEnvVars(t *testing.T) {
 		}
 	}
 }
+
+// A fake opencode that prints the inline config it was launched with.
+func fakeOpenCode(t *testing.T) string {
+	t.Helper()
+	bin := t.TempDir()
+	script := "#!/bin/sh\nprintf '%s' \"$OPENCODE_CONFIG_CONTENT\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "opencode"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return bin
+}
+
+func TestRunOpenCodeMCPMergesInlineConfig(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("needs /bin/sh")
+	}
+	bin := fakeOpenCode(t)
+	cfg := filepath.Join(t.TempDir(), "mcp.json")
+	if err := os.WriteFile(cfg, []byte(`{"mcpServers":{"fs":{"command":"npx"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, tc := range map[string]struct {
+		base, env []string
+		want      string
+	}{
+		"inherited": {base: []string{`OPENCODE_CONFIG_CONTENT={"model":"inherited"}`}, want: `"model":"inherited"`},
+		"--env":     {base: []string{`OPENCODE_CONFIG_CONTENT={"model":"inherited"}`}, env: []string{`OPENCODE_CONFIG_CONTENT={"model":"from-env"}`}, want: `"model":"from-env"`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			options := cham.Options{BaseEnv: append([]string{"PATH=" + bin + ":/usr/bin:/bin"}, tc.base...)}
+			result, err := options.Run(context.Background(), cham.Request{Runtime: "opencode", Dir: t.TempDir(), Prompt: "hi", MCPConfig: []string{cfg}, EnvVars: tc.env})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(result.RawOutput, tc.want) || !strings.Contains(result.RawOutput, `"fs"`) {
+				t.Fatalf("inline config = %s, want %s and the fs server", result.RawOutput, tc.want)
+			}
+		})
+	}
+}

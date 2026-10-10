@@ -57,13 +57,13 @@ func (a *PiRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) 
 	tempMounts := []string{gatePath + ":" + gatePath + ":ro"}
 	extArgs := []string{"--extension", gatePath}
 	if mcpExt != nil {
-		// May hold literal secrets from --mcp-config, so unlike the gate it stays owner-only.
-		mcpPath, err := writeTempFile("cham-pi-mcp-*.ts", mcpExt, 0o600)
+		// May hold literal secrets from --mcp-config, so it lives in a private directory.
+		mcpPath, cleanup, err := writeMCPFile("cham-pi-mcp.ts", mcpExt)
 		if err != nil {
 			_ = os.Remove(gatePath)
 			return AgentCommand{}, fmt.Errorf("pi MCP extension: %w", err)
 		}
-		tempFiles = append(tempFiles, mcpPath)
+		tempFiles = append(tempFiles, cleanup...)
 		tempMounts = append(tempMounts, mcpPath+":"+mcpPath+":ro")
 		extArgs = append(extArgs, "--extension", mcpPath)
 	}

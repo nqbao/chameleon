@@ -103,13 +103,23 @@ translates the file for the runtime:
 |---|---|---|
 | `claude` | temp file via `--mcp-config` | expanded by Claude |
 | `codex` | `-c mcp_servers.<name>.*` overrides | whole values only (`env_vars`, `env_http_headers`, `bearer_token_env_var`); no `sse` |
-| `opencode` | `OPENCODE_CONFIG_CONTENT`, merged over your config | converted to `{env:NAME}` |
+| `opencode` | `OPENCODE_CONFIG_CONTENT`, merged over your config and over any inline config already set | converted to `{env:NAME}` |
 | `pi` | generated extension calling `pi.registerMcpServer` (Pi 0.99 or newer; tools exposed directly, no `sse`) | expanded by Pi |
 | `shell` | not supported; the run fails | |
 
+Codex merges `-c` overrides into a same-named server from its own `config.toml`.
+Chameleon always sets `args` and `env_vars`, which Codex replaces, but `env`, headers and
+a `bearer_token_env_var` merge key by key and a stdio/http switch is rejected by Codex,
+so give servers names that your Codex config does not use. For OpenCode, an
+`OPENCODE_CONFIG_CONTENT` already in the environment (inherited, `--env` or
+`--env-file`) is kept: its other settings survive and servers from `--mcp-config`
+replace same-named ones under `mcp`. Malformed JSON there is an error.
+
 Put the variables a server needs in the agent environment with `--env` / `--env-file`.
 Literal secrets in the file reach Codex as command-line arguments, visible in `ps`;
-use `${NAME}` references instead. Under `--docker` the commands in stdio servers must
+use `${NAME}` references instead. Generated Claude and Pi files live in a private
+(0700) temp directory but are mode 0644, so a container user with a different UID can
+read the mounted copy. Under `--docker` the commands in stdio servers must
 exist in the image, and a server on the host needs `host.docker.internal`, not
 `localhost`. `--sandbox-no-network` blocks remote servers.
 

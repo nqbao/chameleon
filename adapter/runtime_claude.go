@@ -23,8 +23,9 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 		return AgentCommand{}, err
 	}
 	var mcpFile string
+	var mcpCleanup []string
 	if len(ctx.MCPServers) > 0 {
-		if mcpFile, err = writeClaudeMCPConfig(ctx.MCPServers); err != nil {
+		if mcpFile, mcpCleanup, err = writeClaudeMCPConfig(ctx.MCPServers); err != nil {
 			return AgentCommand{}, err
 		}
 	}
@@ -34,7 +35,7 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 			return cmd
 		}
 		cmd.Args = append([]string{"--mcp-config=" + mcpFile}, cmd.Args...)
-		cmd.TempFiles = []string{mcpFile}
+		cmd.TempFiles = mcpCleanup
 		cmd.TempMounts = []string{mcpFile + ":" + mcpFile + ":ro"}
 		return cmd
 	}
