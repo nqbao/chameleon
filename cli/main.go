@@ -213,13 +213,14 @@ func (p *streamPrinter) finish() {
 
 // jsonlEvent is the --events-jsonl wire format. Fields are only ever added.
 type jsonlEvent struct {
-	Type      string `json:"type"` // text, thinking, tool, done, error
-	Content   string `json:"content,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Detail    string `json:"detail,omitempty"`
-	SessionID string `json:"session_id,omitempty"`
-	Message   string `json:"message,omitempty"`
-	ExitCode  int    `json:"exit_code,omitempty"`
+	Type      string         `json:"type"` // text, thinking, tool, done, error
+	Content   string         `json:"content,omitempty"`
+	Name      string         `json:"name,omitempty"`
+	Detail    string         `json:"detail,omitempty"`
+	SessionID string         `json:"session_id,omitempty"`
+	Message   string         `json:"message,omitempty"`
+	ExitCode  int            `json:"exit_code,omitempty"`
+	Usage     *adapter.Usage `json:"usage,omitempty"`
 }
 
 // jsonlWriter emits one JSON object per line on stdout and nothing else.
@@ -277,7 +278,7 @@ func (w *jsonlWriter) finish(result chameleon.Result, err error, stderr io.Write
 	if !w.text && result.Content != "" {
 		w.emit(jsonlEvent{Type: "text", Content: result.Content})
 	}
-	w.emit(jsonlEvent{Type: "done", SessionID: result.SessionID})
+	w.emit(jsonlEvent{Type: "done", SessionID: result.SessionID, Usage: result.Usage})
 	if w.writeError != nil {
 		fmt.Fprintf(stderr, "writing events: %v\n", w.writeError)
 		return 1

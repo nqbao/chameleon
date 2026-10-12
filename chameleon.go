@@ -70,6 +70,7 @@ type Result struct {
 	Content, SessionID, RawOutput string
 	ToolCalls                     []adapter.ToolCall
 	ExitCode                      int
+	Usage                         *adapter.Usage // nil when the runtime reported none
 }
 
 // Run builds and executes an agent command, returning its parsed output and exit
@@ -214,6 +215,7 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 	result.Content = parsed.Content
 	result.SessionID = parsed.SessionID
 	result.ToolCalls = parsed.ToolCalls
+	result.Usage = parsed.Usage
 	if result.Content == "" {
 		result.Content = strings.TrimSpace(adapter.NormalizeToolOutput(string(output)))
 	}

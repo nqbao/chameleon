@@ -145,12 +145,19 @@ func (a *ClaudeRuntime) ParseOutput(output []byte) (AgentResult, error) {
 			continue
 		}
 		var event struct {
-			Type      string `json:"type"`
-			Subtype   string `json:"subtype"`
-			SessionID string `json:"session_id"`
-			IsError   bool   `json:"is_error"`
-			Result    string `json:"result"`
-			Message   *struct {
+			Type      string   `json:"type"`
+			Subtype   string   `json:"subtype"`
+			SessionID string   `json:"session_id"`
+			IsError   bool     `json:"is_error"`
+			Result    string   `json:"result"`
+			CostUSD   *float64 `json:"total_cost_usd"`
+			Usage     *struct {
+				InputTokens         int `json:"input_tokens"`
+				OutputTokens        int `json:"output_tokens"`
+				CacheReadTokens     int `json:"cache_read_input_tokens"`
+				CacheCreationTokens int `json:"cache_creation_input_tokens"`
+			} `json:"usage"`
+			Message *struct {
 				Content []struct {
 					Type  string          `json:"type"`
 					Text  string          `json:"text"`
@@ -172,6 +179,17 @@ func (a *ClaudeRuntime) ParseOutput(output []byte) (AgentResult, error) {
 			}
 			if result.Content == "" && event.Result != "" {
 				result.Content = event.Result
+			}
+			if event.Usage != nil || event.CostUSD != nil {
+				u := &Usage{}
+				if event.Usage != nil {
+					u.InputTokens, u.OutputTokens = event.Usage.InputTokens, event.Usage.OutputTokens
+					u.CacheReadTokens, u.CacheCreationTokens = event.Usage.CacheReadTokens, event.Usage.CacheCreationTokens
+				}
+				if event.CostUSD != nil {
+					u.CostUSD = *event.CostUSD
+				}
+				result.Usage = u
 			}
 		}
 		if event.Type == "assistant" && event.Message != nil {

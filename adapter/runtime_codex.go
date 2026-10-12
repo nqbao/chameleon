@@ -145,7 +145,12 @@ func (a *CodexRuntime) ParseOutput(output []byte) (AgentResult, error) {
 		var event struct {
 			Type     string `json:"type"`
 			ThreadID string `json:"thread_id"`
-			Item     *struct {
+			Usage    *struct {
+				InputTokens       int `json:"input_tokens"`
+				CachedInputTokens int `json:"cached_input_tokens"`
+				OutputTokens      int `json:"output_tokens"`
+			} `json:"usage"`
+			Item *struct {
 				Type    string `json:"type"`
 				Text    string `json:"text"`
 				Command string `json:"command"`
@@ -162,6 +167,14 @@ func (a *CodexRuntime) ParseOutput(output []byte) (AgentResult, error) {
 		}
 		if event.Type == "thread.started" && event.ThreadID != "" {
 			result.SessionID = event.ThreadID
+		}
+		if event.Type == "turn.completed" && event.Usage != nil {
+			if result.Usage == nil {
+				result.Usage = &Usage{}
+			}
+			result.Usage.InputTokens += event.Usage.InputTokens
+			result.Usage.OutputTokens += event.Usage.OutputTokens
+			result.Usage.CacheReadTokens += event.Usage.CachedInputTokens
 		}
 		if (event.Type == "item.completed" || event.Type == "item.started") && event.Item != nil {
 			switch event.Item.Type {

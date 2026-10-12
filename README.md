@@ -172,11 +172,14 @@ consume the run:
 | `text`     | `content`                      | a piece of the response                  |
 | `thinking` | `content`                      | reasoning text, when the runtime has it  |
 | `tool`     | `name`, `detail`               | a tool call started                      |
-| `done`     | `session_id` (may be absent)   | success; always the last line            |
+| `done`     | `session_id`, `usage` (may be absent) | success; always the last line            |
 | `error`    | `message`, `exit_code`         | failure; always the last line            |
 
 stdout carries only these lines; diagnostics go to stderr. A runtime that does
 not stream emits its final answer as a single `text` event before `done`.
+`usage` (`input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_creation_tokens`,
+`cost_usd`) is reported for the claude and codex runtimes only; zero fields are omitted,
+and codex reports tokens but no cost.
 Fields may be added in future; existing types and fields will not change.
 Consecutive assistant messages are separated by a newline in `text` content;
 token deltas within a message are not. When the agent fails, the `error` event

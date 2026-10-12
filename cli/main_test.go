@@ -249,3 +249,16 @@ func TestImageFlag(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONLDoneCarriesUsage(t *testing.T) {
+	var out, errw bytes.Buffer
+	w := &jsonlWriter{enc: json.NewEncoder(&out)}
+	u := &adapter.Usage{InputTokens: 10, OutputTokens: 5, CostUSD: 0.25}
+	if code := w.finish(chameleon.Result{SessionID: "s1", Usage: u}, nil, &errw); code != 0 {
+		t.Fatalf("code=%d", code)
+	}
+	want := `{"type":"done","session_id":"s1","usage":{"input_tokens":10,"output_tokens":5,"cost_usd":0.25}}` + "\n"
+	if out.String() != want {
+		t.Fatalf("got %q", out.String())
+	}
+}
