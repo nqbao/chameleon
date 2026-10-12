@@ -22,6 +22,8 @@ make build
 ```
 
 Use `-p -` to read the prompt from stdin (`git diff | cham run --agent claude -p -`).
+`--image photo.png` (repeatable, requires `-p`) attaches image files; each runtime
+receives the absolute path (with `--docker`, the file must be visible in the container).
 Omit `-p` for interactive agent use. Run `cham run --help` for flags.
 `--agent persona.md` uses the Markdown body as the system prompt; task Markdown
 files use the body as the user prompt. CLI flags override frontmatter. `${name}`

@@ -71,7 +71,7 @@ func Main(ctx context.Context, args []string, streams IO) int {
 func run(ctx context.Context, args []string, streams IO) int {
 	opts, err := parseRunArgsIO(args, streams.Stderr)
 	if errors.Is(err, flag.ErrHelp) {
-		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools --env --env-file --stream --events-jsonl")
+		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools --env --env-file --stream --events-jsonl --image")
 		return 0
 	}
 	if err != nil {
@@ -139,7 +139,7 @@ func run(ctx context.Context, args []string, streams IO) int {
 		st = streamPrinter{stdout: streams.Stdout, stderr: streams.Stderr}
 		onStream = st.handle
 	}
-	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, EnvVars: envVars, ExtraArgs: opts.extraArgs, MCPConfig: opts.mcpConfig, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr, OnStreamEvent: onStream})
+	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, Images: opts.images, EnvVars: envVars, ExtraArgs: opts.extraArgs, MCPConfig: opts.mcpConfig, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr, OnStreamEvent: onStream})
 	st.finish()
 	if jw != nil {
 		return jw.finish(result, err, streams.Stderr)

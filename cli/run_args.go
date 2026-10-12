@@ -7,6 +7,7 @@ import (
 	"github.com/nqbao/chameleon/runfile"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,6 +35,7 @@ type runOptions struct {
 	mcpConfig        []string
 	stream           bool
 	eventsJSONL      bool
+	images           []string
 }
 
 func parseRunArgs(args []string) (runOptions, error) { return parseRunArgsIO(args, io.Discard) }
@@ -63,6 +65,7 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	fs.Var((*repeatedFlag)(&opts.mcpConfig), "mcp-config", "JSON file of MCP servers ({\"mcpServers\": {...}}) to expose to the agent; repeatable; not supported by the shell runtime")
 	fs.BoolVar(&opts.stream, "stream", false, "print the response and tool calls as the agent produces them (requires -p)")
 	fs.BoolVar(&opts.eventsJSONL, "events-jsonl", false, "write one JSON event per line to stdout as the agent works (requires -p; excludes --stream)")
+	fs.Var((*repeatedFlag)(&opts.images), "image", "image file to attach to the prompt; repeatable (requires -p)")
 	var toolsFlag string
 	fs.StringVar(&toolsFlag, "tools", "", "comma-separated allowlist of tool names (e.g. \"Read,Edit,Bash(git *)\")")
 
@@ -223,6 +226,22 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 		}
 		if opts.jsonSchema != "" {
 			return runOptions{}, fmt.Errorf("%s cannot be used with --schema", flagName)
+		}
+	}
+
+	if len(opts.images) > 0 {
+		if opts.prompt == "" {
+			return runOptions{}, fmt.Errorf("--image requires -p")
+		}
+		for i, img := range opts.images {
+			abs, err := filepath.Abs(img)
+			if err != nil {
+				return runOptions{}, fmt.Errorf("--image: %w", err)
+			}
+			if st, err := os.Stat(abs); err != nil || st.IsDir() {
+				return runOptions{}, fmt.Errorf("--image %q: not a readable file", img)
+			}
+			opts.images[i] = abs
 		}
 	}
 

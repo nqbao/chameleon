@@ -233,3 +233,19 @@ func TestPromptFromStdin(t *testing.T) {
 		t.Fatalf("code=%d stderr=%q", code, stderr.String())
 	}
 }
+
+func TestImageFlag(t *testing.T) {
+	img := t.TempDir() + "/a.png"
+	if err := os.WriteFile(img, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := parseRunArgs([]string{"--agent", "shell", "-p", "hi", "--image", img, "--image", img})
+	if err != nil || len(opts.images) != 2 || opts.images[0] != img {
+		t.Fatalf("opts=%+v err=%v", opts, err)
+	}
+	for _, args := range [][]string{{"--agent", "shell", "--image", img}, {"--agent", "shell", "-p", "hi", "--image", img + ".missing"}} {
+		if _, err := parseRunArgs(args); err == nil {
+			t.Fatalf("%v: want error", args)
+		}
+	}
+}
