@@ -91,6 +91,16 @@ func run(ctx context.Context, args []string, streams IO) int {
 		fmt.Fprintln(streams.Stderr, err)
 		return code
 	}
+	if opts.prompt == "-" {
+		data, err := io.ReadAll(streams.Stdin)
+		if err != nil {
+			return fail(1, fmt.Errorf("reading prompt from stdin: %w", err))
+		}
+		opts.prompt = strings.TrimRight(string(data), "\r\n")
+		if strings.TrimSpace(opts.prompt) == "" {
+			return fail(2, errors.New("-p -: stdin is empty"))
+		}
+	}
 	if opts.sandboxMode && opts.dockerImage != "" {
 		return fail(2, errors.New("--sandbox and --docker cannot be used together"))
 	}

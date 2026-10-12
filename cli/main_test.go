@@ -220,3 +220,16 @@ func TestEventsJSONLFlagValidation(t *testing.T) {
 		t.Fatalf("opts=%+v err=%v", opts, err)
 	}
 }
+
+func TestPromptFromStdin(t *testing.T) {
+	isolatedHome(t)
+	var out, stderr bytes.Buffer
+	code := Main(context.Background(), []string{"run", "--agent", "shell", "-p", "-"}, IO{Stdin: strings.NewReader("printf from-stdin\n"), Stdout: &out, Stderr: &stderr})
+	if code != 0 || out.String() != "from-stdin\n" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, out.String(), stderr.String())
+	}
+	stderr.Reset()
+	if code := Main(context.Background(), []string{"run", "--agent", "shell", "-p", "-"}, IO{Stderr: &stderr}); code != 2 || !strings.Contains(stderr.String(), "stdin is empty") {
+		t.Fatalf("code=%d stderr=%q", code, stderr.String())
+	}
+}
