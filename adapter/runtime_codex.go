@@ -49,8 +49,10 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 	if ctx.Model != "" {
 		args = append(args, "--model", ctx.Model)
 	}
-	for _, p := range ctx.Images {
-		args = append(args, "--image", p)
+	if ctx.SessionID == "" {
+		for _, p := range ctx.Images {
+			args = append(args, "--image", p)
+		}
 	}
 	if ctx.Sandbox {
 		args = append(args, "--sandbox", "workspace-write")
@@ -88,6 +90,11 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 			prompt += "Attached file paths:\n" + strings.Join(refs, "\n")
 		}
 		args = append(args, "--color", "never", "--json", "resume")
+		// On continued turns the image flag belongs to the resume subcommand;
+		// before it, codex does not attach the images.
+		for _, p := range ctx.Images {
+			args = append(args, "--image", p)
+		}
 		if ctx.Yolo {
 			args = append(args, "--dangerously-bypass-approvals-and-sandbox")
 		}

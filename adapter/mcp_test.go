@@ -349,3 +349,18 @@ func TestOpenCodeMCPKeepsInlineConfigFromEnv(t *testing.T) {
 		}
 	}
 }
+
+func TestCodexImagePlacement(t *testing.T) {
+	for _, tc := range []struct{ session, want string }{
+		{"", "exec --image /a.png --image /b.png"},
+		{"s1", "resume --image /a.png --image /b.png s1 hi"},
+	} {
+		cmd, err := (&CodexRuntime{}).BuildCommand(AgentCommandContext{Prompt: "hi", SessionID: tc.session, WorkspaceDir: "/w", Images: []string{"/a.png", "/b.png"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if joined := strings.Join(cmd.Args, " "); !strings.Contains(joined, tc.want) {
+			t.Errorf("session %q: want %q in %q", tc.session, tc.want, joined)
+		}
+	}
+}
