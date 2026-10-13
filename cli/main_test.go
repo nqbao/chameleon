@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	chameleon "github.com/nqbao/chameleon"
 	"github.com/nqbao/chameleon/adapter"
@@ -218,5 +220,68 @@ func TestEventsJSONLFlagValidation(t *testing.T) {
 	}
 	if opts, err := parseRunArgs([]string{"--agent", "claude", "--events-jsonl", "-p", "x"}); err != nil || !opts.eventsJSONL {
 		t.Fatalf("opts=%+v err=%v", opts, err)
+	}
+}
+
+func TestPromptFromStdin(t *testing.T) {
+	isolatedHome(t)
+	var out, stderr bytes.Buffer
+	code := Main(context.Background(), []string{"run", "--agent", "shell", "-p", "-"}, IO{Stdin: strings.NewReader("printf from-stdin\n"), Stdout: &out, Stderr: &stderr})
+	if code != 0 || out.String() != "from-stdin\n" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, out.String(), stderr.String())
+	}
+	stderr.Reset()
+	if code := Main(context.Background(), []string{"run", "--agent", "shell", "-p", "-"}, IO{Stderr: &stderr}); code != 2 || !strings.Contains(stderr.String(), "stdin is empty") {
+		t.Fatalf("code=%d stderr=%q", code, stderr.String())
+	}
+}
+
+func TestImageFlag(t *testing.T) {
+	img := t.TempDir() + "/a.png"
+	if err := os.WriteFile(img, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	opts, err := parseRunArgs([]string{"--agent", "shell", "-p", "hi", "--image", img, "--image", img})
+	if err != nil || len(opts.images) != 2 || opts.images[0] != img {
+		t.Fatalf("opts=%+v err=%v", opts, err)
+	}
+	for _, args := range [][]string{{"--agent", "shell", "--image", img}, {"--agent", "shell", "-p", "hi", "--image", img + ".missing"}} {
+		if _, err := parseRunArgs(args); err == nil {
+			t.Fatalf("%v: want error", args)
+		}
+	}
+}
+
+func TestJSONLDoneCarriesUsage(t *testing.T) {
+	var out, errw bytes.Buffer
+	w := &jsonlWriter{enc: json.NewEncoder(&out)}
+	u := &adapter.Usage{InputTokens: 10, OutputTokens: 5, CostUSD: 0.25}
+	if code := w.finish(chameleon.Result{SessionID: "s1", Usage: u}, nil, &errw); code != 0 {
+		t.Fatalf("code=%d", code)
+	}
+	want := `{"type":"done","session_id":"s1","usage":{"input_tokens":10,"output_tokens":5,"cost_usd":0.25}}` + "\n"
+	if out.String() != want {
+		t.Fatalf("got %q", out.String())
+	}
+}
+
+func TestPromptFromStdinCancel(t *testing.T) {
+	isolatedHome(t)
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	code := make(chan int, 1)
+	var out, stderr bytes.Buffer
+	go func() {
+		code <- Main(ctx, []string{"run", "--agent", "shell", "--events-jsonl", "-p", "-"}, IO{Stdin: pr, Stdout: &out, Stderr: &stderr})
+	}()
+	cancel()
+	select {
+	case c := <-code:
+		if c != 1 || !strings.Contains(out.String(), `"type":"error"`) || !strings.Contains(stderr.String(), "context canceled") {
+			t.Fatalf("code=%d stdout=%q stderr=%q", c, out.String(), stderr.String())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Main did not return after cancellation while stdin was open")
 	}
 }

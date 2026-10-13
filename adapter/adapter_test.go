@@ -239,3 +239,22 @@ func TestOpenCodeParseStreamLineMessageBoundary(t *testing.T) {
 		t.Fatalf("got %+v want %+v", got, want)
 	}
 }
+
+func TestParseOutputUsage(t *testing.T) {
+	claude := `{"type":"result","is_error":false,"result":"ok","total_cost_usd":0.0123,"usage":{"input_tokens":3,"output_tokens":7,"cache_read_input_tokens":100,"cache_creation_input_tokens":20}}`
+	res, _ := (&ClaudeRuntime{}).ParseOutput([]byte(claude))
+	if want := (Usage{InputTokens: 3, OutputTokens: 7, CacheReadTokens: 100, CacheCreationTokens: 20, CostUSD: 0.0123}); res.Usage == nil || *res.Usage != want {
+		t.Errorf("claude usage = %+v", res.Usage)
+	}
+	codex := `{"type":"thread.started","thread_id":"t"}
+{"type":"turn.completed","usage":{"input_tokens":50,"cached_input_tokens":40,"output_tokens":9}}
+{"type":"turn.completed","usage":{"input_tokens":5,"cached_input_tokens":0,"output_tokens":1}}`
+	res, _ = (&CodexRuntime{}).ParseOutput([]byte(codex))
+	if want := (Usage{InputTokens: 55, OutputTokens: 10, CacheReadTokens: 40}); res.Usage == nil || *res.Usage != want {
+		t.Errorf("codex usage = %+v", res.Usage)
+	}
+	res, _ = (&ClaudeRuntime{}).ParseOutput([]byte(`{"type":"result","result":"ok"}`))
+	if res.Usage != nil {
+		t.Errorf("no usage reported, got %+v", res.Usage)
+	}
+}

@@ -17,6 +17,12 @@ import (
 )
 
 // IO supplies all command input and output. Nil outputs discard; nil input is EOF.
+//
+// With -p -, Stdin is read to EOF. If the context is canceled first, Main
+// returns at once but the read already in flight cannot be interrupted: it
+// stays pending, and may consume input, until Stdin delivers data or closes.
+// Callers that reuse Stdin after cancellation should close it or pass a
+// per-call reader.
 type IO struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
@@ -68,10 +74,31 @@ func Main(ctx context.Context, args []string, streams IO) int {
 	}
 }
 
+// readPrompt reads r to EOF but returns as soon as ctx is canceled. A read
+// that is already blocked cannot be interrupted, so its goroutine is left to
+// finish on its own; the buffered channel lets it exit without a receiver.
+func readPrompt(ctx context.Context, r io.Reader) ([]byte, error) {
+	type result struct {
+		data []byte
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		data, err := io.ReadAll(r)
+		done <- result{data, err}
+	}()
+	select {
+	case res := <-done:
+		return res.data, res.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 func run(ctx context.Context, args []string, streams IO) int {
 	opts, err := parseRunArgsIO(args, streams.Stderr)
 	if errors.Is(err, flag.ErrHelp) {
-		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools --env --env-file --stream --events-jsonl")
+		fmt.Fprintln(streams.Stdout, "usage: cham run --agent <runtime|persona.md> [-p prompt] [task.md key=value ...]\nflags: --runtime --model --session --yolo --dir --docker --docker-socket --docker-args\n       --sandbox --sandbox-no-network --setup --shell --schema --tools --env --env-file --stream --events-jsonl --image")
 		return 0
 	}
 	if err != nil {
@@ -90,6 +117,16 @@ func run(ctx context.Context, args []string, streams IO) int {
 		}
 		fmt.Fprintln(streams.Stderr, err)
 		return code
+	}
+	if opts.prompt == "-" {
+		data, err := readPrompt(ctx, streams.Stdin)
+		if err != nil {
+			return fail(1, fmt.Errorf("reading prompt from stdin: %w", err))
+		}
+		opts.prompt = strings.TrimRight(string(data), "\r\n")
+		if strings.TrimSpace(opts.prompt) == "" {
+			return fail(2, errors.New("-p -: stdin is empty"))
+		}
 	}
 	if opts.sandboxMode && opts.dockerImage != "" {
 		return fail(2, errors.New("--sandbox and --docker cannot be used together"))
@@ -129,7 +166,7 @@ func run(ctx context.Context, args []string, streams IO) int {
 		st = streamPrinter{stdout: streams.Stdout, stderr: streams.Stderr}
 		onStream = st.handle
 	}
-	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, EnvVars: envVars, ExtraArgs: opts.extraArgs, MCPConfig: opts.mcpConfig, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr, OnStreamEvent: onStream})
+	result, err := options.Run(ctx, chameleon.Request{Runtime: opts.runtime, Model: opts.model, Prompt: opts.prompt, SystemPrompt: opts.systemPrompt, SessionID: opts.sessionID, Dir: opts.dir, Env: kind, Image: opts.dockerImage, DockerSocket: opts.dockerSocket, DockerArgs: opts.dockerArgs, NoNetwork: opts.sandboxNoNetwork, Yolo: opts.yolo, Interactive: opts.prompt == "", Setup: opts.setup, Shell: opts.shell, JSONSchema: opts.jsonSchema, Tools: opts.tools, Images: opts.images, EnvVars: envVars, ExtraArgs: opts.extraArgs, MCPConfig: opts.mcpConfig, Stdin: streams.Stdin, Stdout: streams.Stdout, Stderr: streams.Stderr, OnStreamEvent: onStream})
 	st.finish()
 	if jw != nil {
 		return jw.finish(result, err, streams.Stderr)
@@ -203,13 +240,14 @@ func (p *streamPrinter) finish() {
 
 // jsonlEvent is the --events-jsonl wire format. Fields are only ever added.
 type jsonlEvent struct {
-	Type      string `json:"type"` // text, thinking, tool, done, error
-	Content   string `json:"content,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Detail    string `json:"detail,omitempty"`
-	SessionID string `json:"session_id,omitempty"`
-	Message   string `json:"message,omitempty"`
-	ExitCode  int    `json:"exit_code,omitempty"`
+	Type      string         `json:"type"` // text, thinking, tool, done, error
+	Content   string         `json:"content,omitempty"`
+	Name      string         `json:"name,omitempty"`
+	Detail    string         `json:"detail,omitempty"`
+	SessionID string         `json:"session_id,omitempty"`
+	Message   string         `json:"message,omitempty"`
+	ExitCode  int            `json:"exit_code,omitempty"`
+	Usage     *adapter.Usage `json:"usage,omitempty"`
 }
 
 // jsonlWriter emits one JSON object per line on stdout and nothing else.
@@ -267,7 +305,7 @@ func (w *jsonlWriter) finish(result chameleon.Result, err error, stderr io.Write
 	if !w.text && result.Content != "" {
 		w.emit(jsonlEvent{Type: "text", Content: result.Content})
 	}
-	w.emit(jsonlEvent{Type: "done", SessionID: result.SessionID})
+	w.emit(jsonlEvent{Type: "done", SessionID: result.SessionID, Usage: result.Usage})
 	if w.writeError != nil {
 		fmt.Fprintf(stderr, "writing events: %v\n", w.writeError)
 		return 1

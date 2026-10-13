@@ -49,8 +49,10 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 	if ctx.Model != "" {
 		args = append(args, "--model", ctx.Model)
 	}
-	for _, p := range ctx.Images {
-		args = append(args, "--image", p)
+	if ctx.SessionID == "" {
+		for _, p := range ctx.Images {
+			args = append(args, "--image", p)
+		}
 	}
 	if ctx.Sandbox {
 		args = append(args, "--sandbox", "workspace-write")
@@ -88,6 +90,11 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 			prompt += "Attached file paths:\n" + strings.Join(refs, "\n")
 		}
 		args = append(args, "--color", "never", "--json", "resume")
+		// On continued turns the image flag belongs to the resume subcommand;
+		// before it, codex does not attach the images.
+		for _, p := range ctx.Images {
+			args = append(args, "--image", p)
+		}
 		if ctx.Yolo {
 			args = append(args, "--dangerously-bypass-approvals-and-sandbox")
 		}
@@ -138,7 +145,12 @@ func (a *CodexRuntime) ParseOutput(output []byte) (AgentResult, error) {
 		var event struct {
 			Type     string `json:"type"`
 			ThreadID string `json:"thread_id"`
-			Item     *struct {
+			Usage    *struct {
+				InputTokens       int `json:"input_tokens"`
+				CachedInputTokens int `json:"cached_input_tokens"`
+				OutputTokens      int `json:"output_tokens"`
+			} `json:"usage"`
+			Item *struct {
 				Type    string `json:"type"`
 				Text    string `json:"text"`
 				Command string `json:"command"`
@@ -155,6 +167,14 @@ func (a *CodexRuntime) ParseOutput(output []byte) (AgentResult, error) {
 		}
 		if event.Type == "thread.started" && event.ThreadID != "" {
 			result.SessionID = event.ThreadID
+		}
+		if event.Type == "turn.completed" && event.Usage != nil {
+			if result.Usage == nil {
+				result.Usage = &Usage{}
+			}
+			result.Usage.InputTokens += event.Usage.InputTokens
+			result.Usage.OutputTokens += event.Usage.OutputTokens
+			result.Usage.CacheReadTokens += event.Usage.CachedInputTokens
 		}
 		if (event.Type == "item.completed" || event.Type == "item.started") && event.Item != nil {
 			switch event.Item.Type {

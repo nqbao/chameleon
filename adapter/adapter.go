@@ -77,11 +77,23 @@ type ToolCall struct {
 	Detail string          `json:"detail,omitempty"` // computed at load time, not stored
 }
 
+// Usage is what a runtime reported for a run. Fields a runtime does not report
+// stay zero. InputTokens follows each runtime's own accounting: Claude excludes
+// cache tokens, Codex includes the cached portion.
+type Usage struct {
+	InputTokens         int     `json:"input_tokens,omitempty"`
+	OutputTokens        int     `json:"output_tokens,omitempty"`
+	CacheReadTokens     int     `json:"cache_read_tokens,omitempty"`
+	CacheCreationTokens int     `json:"cache_creation_tokens,omitempty"`
+	CostUSD             float64 `json:"cost_usd,omitempty"`
+}
+
 type AgentResult struct {
 	Content   string
 	SessionID string
 	IsError   bool
 	ToolCalls []ToolCall
+	Usage     *Usage // nil when the runtime reported none
 }
 
 type StreamEvent struct {
