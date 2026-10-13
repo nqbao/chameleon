@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	chameleon "github.com/nqbao/chameleon"
 	"github.com/nqbao/chameleon/adapter"
@@ -260,5 +262,26 @@ func TestJSONLDoneCarriesUsage(t *testing.T) {
 	want := `{"type":"done","session_id":"s1","usage":{"input_tokens":10,"output_tokens":5,"cost_usd":0.25}}` + "\n"
 	if out.String() != want {
 		t.Fatalf("got %q", out.String())
+	}
+}
+
+func TestPromptFromStdinCancel(t *testing.T) {
+	isolatedHome(t)
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	code := make(chan int, 1)
+	var out, stderr bytes.Buffer
+	go func() {
+		code <- Main(ctx, []string{"run", "--agent", "shell", "--events-jsonl", "-p", "-"}, IO{Stdin: pr, Stdout: &out, Stderr: &stderr})
+	}()
+	cancel()
+	select {
+	case c := <-code:
+		if c != 1 || !strings.Contains(out.String(), `"type":"error"`) || !strings.Contains(stderr.String(), "context canceled") {
+			t.Fatalf("code=%d stdout=%q stderr=%q", c, out.String(), stderr.String())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Main did not return after cancellation while stdin was open")
 	}
 }

@@ -17,6 +17,12 @@ import (
 )
 
 // IO supplies all command input and output. Nil outputs discard; nil input is EOF.
+//
+// With -p -, Stdin is read to EOF. If the context is canceled first, Main
+// returns at once but the read already in flight cannot be interrupted: it
+// stays pending, and may consume input, until Stdin delivers data or closes.
+// Callers that reuse Stdin after cancellation should close it or pass a
+// per-call reader.
 type IO struct {
 	Stdin          io.Reader
 	Stdout, Stderr io.Writer
@@ -68,6 +74,27 @@ func Main(ctx context.Context, args []string, streams IO) int {
 	}
 }
 
+// readPrompt reads r to EOF but returns as soon as ctx is canceled. A read
+// that is already blocked cannot be interrupted, so its goroutine is left to
+// finish on its own; the buffered channel lets it exit without a receiver.
+func readPrompt(ctx context.Context, r io.Reader) ([]byte, error) {
+	type result struct {
+		data []byte
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		data, err := io.ReadAll(r)
+		done <- result{data, err}
+	}()
+	select {
+	case res := <-done:
+		return res.data, res.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
 func run(ctx context.Context, args []string, streams IO) int {
 	opts, err := parseRunArgsIO(args, streams.Stderr)
 	if errors.Is(err, flag.ErrHelp) {
@@ -92,7 +119,7 @@ func run(ctx context.Context, args []string, streams IO) int {
 		return code
 	}
 	if opts.prompt == "-" {
-		data, err := io.ReadAll(streams.Stdin)
+		data, err := readPrompt(ctx, streams.Stdin)
 		if err != nil {
 			return fail(1, fmt.Errorf("reading prompt from stdin: %w", err))
 		}
