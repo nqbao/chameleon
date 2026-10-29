@@ -183,7 +183,7 @@
       "--permission-mode",
       "bypassPermissions",
       "--settings",
-      "{\"sandbox\":{\"enabled\":true}}",
+      "{\"sandbox\":{\"allowUnsandboxedCommands\":false,\"enabled\":true,\"failIfUnavailable\":true}}",
       "--system-prompt",
       "be concise",
       "-p",
@@ -224,7 +224,7 @@
       "--permission-mode",
       "bypassPermissions",
       "--settings",
-      "{\"sandbox\":{\"enabled\":true}}",
+      "{\"sandbox\":{\"allowUnsandboxedCommands\":false,\"enabled\":true,\"failIfUnavailable\":true}}",
       "--system-prompt",
       "be concise"
     ],
@@ -404,7 +404,7 @@
       "never",
       "--json",
       "resume",
-      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
       "session-123",
       "hello"
     ],
@@ -442,7 +442,8 @@
       "test-model",
       "--sandbox",
       "workspace-write",
-      "--dangerously-bypass-approvals-and-sandbox",
+      "--ask-for-approval",
+      "never",
       "be concise"
     ],
     "Env": null,

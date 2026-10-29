@@ -158,7 +158,7 @@ func (d *DockerContainerSetup) InitScript() string {
 	}
 	// Source login profiles and nvm so PATH picks up user-installed binaries.
 	sb.WriteString("[ -f /etc/profile ] && . /etc/profile\n")
-	sb.WriteString("[ -f \"$HOME/.bash_profile\" ] && . \"$HOME/.bash_profile\" || [ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"\n")
+	sb.WriteString("if [ -f \"$HOME/.bash_profile\" ]; then . \"$HOME/.bash_profile\"; elif [ -f \"$HOME/.bashrc\" ]; then . \"$HOME/.bashrc\"; fi\n")
 	sb.WriteString("[ -s \"$HOME/.nvm/nvm.sh\" ] && . \"$HOME/.nvm/nvm.sh\"\n")
 	if d.ExtraInit != "" {
 		sb.WriteString(d.ExtraInit)

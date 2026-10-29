@@ -291,3 +291,42 @@ func TestParseRunArgsMCPConfig(t *testing.T) {
 		t.Errorf("mcpConfig = %v", opts.mcpConfig)
 	}
 }
+
+func TestParseRunArgsFrontmatterYolo(t *testing.T) {
+	task := writeTempMD(t, "---\nruntime: claude\nyolo: true\n---\n\nHello.\n")
+	taskSelfIsolated := writeTempMD(t, "---\nruntime: claude\nyolo: true\ndocker: img\nsandbox: true\n---\n\nHello.\n")
+	persona := writeTempMD(t, "---\nruntime: claude\nyolo: true\n---\n\nYou review code.\n")
+
+	tests := []struct {
+		name     string
+		args     []string
+		wantYolo bool
+		wantWarn bool
+	}{
+		{"task file alone", []string{task}, false, true},
+		{"task file with --yolo", []string{"--yolo", task}, true, false},
+		{"task file with --yolo=false", []string{"--yolo=false", task}, false, false},
+		{"task file with --docker", []string{"--docker", "img", task}, true, false},
+		{"task file with --sandbox", []string{"--sandbox", task}, true, false},
+		{"task file with --sandbox=false", []string{"--sandbox=false", task}, false, true},
+		{"task file isolating itself", []string{taskSelfIsolated}, false, true},
+		{"persona alone", []string{"--agent", persona, "-p", "hi"}, false, true},
+		{"persona with --docker", []string{"--agent", persona, "--docker", "img", "-p", "hi"}, true, false},
+		{"persona with --yolo", []string{"--agent", persona, "--yolo", "-p", "hi"}, true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stderr strings.Builder
+			opts, err := parseRunArgsIO(tt.args, &stderr)
+			if err != nil {
+				t.Fatalf("parseRunArgs() error = %v", err)
+			}
+			if opts.yolo != tt.wantYolo {
+				t.Errorf("yolo = %v, want %v", opts.yolo, tt.wantYolo)
+			}
+			if gotWarn := strings.Contains(stderr.String(), `ignoring "yolo: true"`); gotWarn != tt.wantWarn {
+				t.Errorf("warning = %v, want %v (stderr %q)", gotWarn, tt.wantWarn, stderr.String())
+			}
+		})
+	}
+}

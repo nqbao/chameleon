@@ -36,9 +36,7 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 		if ctx.Sandbox {
 			args = append(args, "--sandbox", "workspace-write")
 		}
-		if ctx.Yolo {
-			args = append(args, "--dangerously-bypass-approvals-and-sandbox")
-		}
+		args = append(args, codexYoloArgs(ctx)...)
 		// Codex has no system-prompt flag; pass it as the initial user message instead.
 		if ctx.SystemPrompt != "" {
 			args = append(args, ctx.SystemPrompt)
@@ -73,9 +71,7 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 			}
 			prompt += "Attached file paths:\n" + strings.Join(refs, "\n")
 		}
-		if ctx.Yolo {
-			args = append(args, "--dangerously-bypass-approvals-and-sandbox")
-		}
+		args = append(args, codexYoloArgs(ctx)...)
 		args = append(args, "--cd", ctx.WorkspaceDir, "--color", "never", "--json", prompt)
 	} else {
 		prompt := ctx.Prompt
@@ -95,9 +91,7 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 		for _, p := range ctx.Images {
 			args = append(args, "--image", p)
 		}
-		if ctx.Yolo {
-			args = append(args, "--dangerously-bypass-approvals-and-sandbox")
-		}
+		args = append(args, codexYoloArgs(ctx)...)
 		args = append(args, ctx.SessionID, prompt)
 	}
 	cmd := AgentCommand{
@@ -132,6 +126,24 @@ func (a *CodexRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, erro
 		}
 	}
 	return cmd, nil
+}
+
+// codexYoloArgs returns the flags that skip approvals. The bypass flag also
+// turns off codex's sandbox (it forces danger-full-access), so under --sandbox
+// approvals are skipped while workspace-write stays on: interactively with
+// --ask-for-approval never, and in exec (which never asks) by only skipping the
+// git repo check that the bypass flag used to skip.
+func codexYoloArgs(ctx AgentCommandContext) []string {
+	switch {
+	case !ctx.Yolo:
+		return nil
+	case !ctx.Sandbox:
+		return []string{"--dangerously-bypass-approvals-and-sandbox"}
+	case ctx.Interactive:
+		return []string{"--ask-for-approval", "never"}
+	default:
+		return []string{"--skip-git-repo-check"}
+	}
 }
 
 func (a *CodexRuntime) ParseOutput(output []byte) (AgentResult, error) {

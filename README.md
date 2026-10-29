@@ -34,6 +34,15 @@ The `runfile` package also supports `@path` values for file content substitution
 OpenCode, and shell it uses macOS `sandbox-exec`. `--sandbox-no-network` applies
 only to the latter group. Docker and sandbox flags are mutually exclusive.
 
+`--yolo` skips the agent's permission prompts. With `--sandbox` the sandbox stays
+on: Codex keeps `workspace-write` and only stops asking, and Claude's sandbox is
+made strict (no unsandboxed retries, and it fails if the sandbox cannot start).
+`yolo: true` in a task or persona file's frontmatter is honored only when
+`--docker` or `--sandbox` is given on the command line; otherwise it is ignored
+with a warning. Run files often live in the repository the agent works on, so a
+file cannot turn off prompts on the host by itself. `--yolo` and `--yolo=false`
+override the frontmatter either way.
+
 `--docker-args` passes extra flags to `docker run`, before the image name. The
 string is split shell-style (quotes and backslashes; no variable expansion, no
 shell):

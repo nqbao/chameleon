@@ -36,6 +36,7 @@ type runOptions struct {
 	stream           bool
 	eventsJSONL      bool
 	images           []string
+	yoloFrom         string // run file whose frontmatter asked for yolo; see applyFrontmatterYolo
 }
 
 func parseRunArgs(args []string) (runOptions, error) { return parseRunArgsIO(args, io.Discard) }
@@ -151,7 +152,7 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 			opts.model = fm.Model
 		}
 		if !explicitFlags["yolo"] && fm.Yolo {
-			opts.yolo = fm.Yolo
+			opts.yoloFrom = mdFile
 		}
 		if !explicitFlags["docker"] && fm.Docker != "" {
 			opts.dockerImage = fm.Docker
@@ -214,6 +215,8 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 		return runOptions{}, fmt.Errorf("--agent (or --runtime) is required")
 	}
 
+	applyFrontmatterYolo(&opts, explicitFlags, stderr)
+
 	if opts.stream && opts.eventsJSONL {
 		return runOptions{}, fmt.Errorf("--stream and --events-jsonl cannot be used together")
 	}
@@ -263,6 +266,24 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	return opts, nil
 }
 
+// applyFrontmatterYolo honors "yolo: true" from a task or persona file only
+// when the run is isolated by --docker or --sandbox given on the command line.
+// Run files often live in the repository the agent works on, so a file must
+// not be able to turn off permission prompts on the host by itself, nor
+// qualify itself by also setting docker: or sandbox: in its frontmatter.
+func applyFrontmatterYolo(opts *runOptions, explicitFlags map[string]bool, stderr io.Writer) {
+	from := opts.yoloFrom
+	opts.yoloFrom = ""
+	if from == "" {
+		return
+	}
+	if (explicitFlags["docker"] && opts.dockerImage != "") || (explicitFlags["sandbox"] && opts.sandboxMode) {
+		opts.yolo = true
+		return
+	}
+	fmt.Fprintf(stderr, "cham run: warning: ignoring \"yolo: true\" from %s; pass --yolo, or --docker or --sandbox on the command line\n", from)
+}
+
 // streamFlagName names whichever streaming flag is set, or "" if none.
 func streamFlagName(opts runOptions) string {
 	switch {
@@ -299,8 +320,8 @@ func applyAgentArg(agent string, explicitFlags map[string]bool, opts *runOptions
 	if !explicitFlags["model"] && opts.model == "" && fm.Model != "" {
 		opts.model = fm.Model
 	}
-	if !explicitFlags["yolo"] && !opts.yolo && fm.Yolo {
-		opts.yolo = fm.Yolo
+	if !explicitFlags["yolo"] && opts.yoloFrom == "" && fm.Yolo {
+		opts.yoloFrom = agent
 	}
 	if !explicitFlags["docker"] && opts.dockerImage == "" && fm.Docker != "" {
 		opts.dockerImage = fm.Docker
