@@ -258,3 +258,45 @@ func TestParseOutputUsage(t *testing.T) {
 		t.Errorf("no usage reported, got %+v", res.Usage)
 	}
 }
+
+func TestCodexYoloKeepsSandbox(t *testing.T) {
+	tests := []struct {
+		name        string
+		ctx         AgentCommandContext
+		want, avoid string
+	}{
+		{"exec yolo", AgentCommandContext{Prompt: "x", Yolo: true}, "--dangerously-bypass-approvals-and-sandbox", ""},
+		{"exec sandbox yolo", AgentCommandContext{Prompt: "x", Yolo: true, Sandbox: true}, "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"},
+		{"resume sandbox yolo", AgentCommandContext{Prompt: "x", Yolo: true, Sandbox: true, SessionID: "s"}, "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox"},
+		{"interactive sandbox yolo", AgentCommandContext{Interactive: true, Yolo: true, Sandbox: true}, "--ask-for-approval never", "--dangerously-bypass-approvals-and-sandbox"},
+	}
+	for _, tt := range tests {
+		cmd, err := (&CodexRuntime{}).BuildCommand(tt.ctx)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		args := strings.Join(cmd.Args, " ")
+		if !strings.Contains(args, tt.want) {
+			t.Errorf("%s: args %q missing %q", tt.name, args, tt.want)
+		}
+		if tt.avoid != "" && strings.Contains(args, tt.avoid) {
+			t.Errorf("%s: args %q contain %q", tt.name, args, tt.avoid)
+		}
+		if tt.ctx.Sandbox && !strings.Contains(args, "--sandbox workspace-write") {
+			t.Errorf("%s: args %q missing --sandbox workspace-write", tt.name, args)
+		}
+	}
+}
+
+func TestClaudeSandboxStrictWithYolo(t *testing.T) {
+	got, err := claudeSettingsArg(true, true, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"sandbox":{"allowUnsandboxedCommands":false,"enabled":true,"failIfUnavailable":true}}`; got != want {
+		t.Errorf("settings = %s, want %s", got, want)
+	}
+	if got, _ = claudeSettingsArg(true, false, nil); got != `{"sandbox":{"enabled":true}}` {
+		t.Errorf("settings without yolo = %s", got)
+	}
+}

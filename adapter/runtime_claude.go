@@ -23,7 +23,7 @@ func (a *ClaudeRuntime) Credentials() environment.CredentialProvider { return Cl
 func (a *ClaudeRuntime) SetupCmd() []string                          { return []string{"claude", "login"} }
 
 func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, error) {
-	settingsArg, err := claudeSettingsArg(ctx.Sandbox, ctx.ProviderSettings)
+	settingsArg, err := claudeSettingsArg(ctx.Sandbox, ctx.Yolo, ctx.ProviderSettings)
 	if err != nil {
 		return AgentCommand{}, err
 	}
@@ -117,8 +117,10 @@ func (a *ClaudeRuntime) BuildCommand(ctx AgentCommandContext) (AgentCommand, err
 }
 
 // claudeSettingsArg builds the JSON string for --settings when sandbox or
-// ProviderSettings are in use. Returns "" when neither applies.
-func claudeSettingsArg(sandbox bool, extra map[string]interface{}) (string, error) {
+// ProviderSettings are in use. Returns "" when neither applies. With yolo, the
+// sandbox is made strict: bypassPermissions would otherwise approve Claude's
+// unsandboxed retry of a failed command without a prompt.
+func claudeSettingsArg(sandbox, yolo bool, extra map[string]interface{}) (string, error) {
 	if !sandbox && len(extra) == 0 {
 		return "", nil
 	}
@@ -127,7 +129,12 @@ func claudeSettingsArg(sandbox bool, extra map[string]interface{}) (string, erro
 		settings[k] = v
 	}
 	if sandbox {
-		settings["sandbox"] = map[string]interface{}{"enabled": true}
+		sb := map[string]interface{}{"enabled": true}
+		if yolo {
+			sb["allowUnsandboxedCommands"] = false
+			sb["failIfUnavailable"] = true
+		}
+		settings["sandbox"] = sb
 	}
 	b, err := json.Marshal(settings)
 	if err != nil {
