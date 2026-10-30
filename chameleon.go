@@ -60,6 +60,7 @@ type Request struct {
 	Shell, JSONSchema                               string
 	Tools, ExtraArgs, Files, Images                 []string
 	MCPConfig                                       []string // paths to {"mcpServers": {...}} JSON files, merged in order; trusted input: stdio servers run commands as the agent's user
+	NoMCPURLRewrite                                 bool // keep local MCP URLs unchanged in Docker; otherwise loopback and unspecified hosts become host.docker.internal
 	EnvVars                                         []string // extra NAME=value pairs for the agent process; override workspace secrets; every environment kind
 	Stdin                                           io.Reader
 	Stdout, Stderr                                  io.Writer
@@ -108,6 +109,12 @@ func (o Options) Run(ctx context.Context, req Request) (Result, error) {
 	mcpServers, err := adapter.LoadMCPConfigs(req.MCPConfig)
 	if err != nil {
 		return fail(err)
+	}
+	if kind == Docker && !req.NoMCPURLRewrite {
+		for name, server := range mcpServers {
+			server.URL = dockerMCPURL(server.URL)
+			mcpServers[name] = server
+		}
 	}
 	ws := Workspace{Path: req.Dir}
 	if err := validateEnvVars(req.EnvVars); err != nil {

@@ -33,6 +33,7 @@ type runOptions struct {
 	envFiles         []string
 	envFlags         []string
 	mcpConfig        []string
+	noMCPURLRewrite  bool
 	stream           bool
 	eventsJSONL      bool
 	images           []string
@@ -64,6 +65,7 @@ func parseRunArgsIO(args []string, stderr io.Writer) (runOptions, error) {
 	fs.Var((*repeatedFlag)(&opts.envFiles), "env-file", "file of NAME=value lines injected into the agent's environment; repeatable")
 	fs.Var((*repeatedFlag)(&opts.envFlags), "env", "NAME=value (or NAME to copy from the current environment) injected into the agent's environment; repeatable")
 	fs.Var((*repeatedFlag)(&opts.mcpConfig), "mcp-config", "JSON file of MCP servers ({\"mcpServers\": {...}}) to expose to the agent; repeatable; not supported by the shell runtime")
+	fs.BoolVar(&opts.noMCPURLRewrite, "no-mcp-url-rewrite", false, "keep local MCP URLs unchanged in Docker (default: rewrite loopback and unspecified hosts to host.docker.internal)")
 	fs.BoolVar(&opts.stream, "stream", false, "print the response and tool calls as the agent produces them (requires -p)")
 	fs.BoolVar(&opts.eventsJSONL, "events-jsonl", false, "write one JSON event per line to stdout as the agent works (requires -p; excludes --stream)")
 	fs.Var((*repeatedFlag)(&opts.images), "image", "image file to attach to the prompt; repeatable (requires -p)")

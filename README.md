@@ -133,8 +133,30 @@ Literal secrets in the file reach Codex as command-line arguments, visible in `p
 use `${NAME}` references instead. Generated Claude and Pi files live in a private
 (0700) temp directory but are mode 0644, so a container user with a different UID can
 read the mounted copy. Under `--docker` the commands in stdio servers must
-exist in the image, and a server on the host needs `host.docker.internal`, not
-`localhost`. `--sandbox-no-network` blocks remote servers.
+exist in the image. For HTTP/SSE servers, Docker runs automatically rewrite
+HTTP(S) URLs with `localhost`, loopback IP hosts (`127.0.0.1`, `[::1]`), or
+unspecified IP hosts (`0.0.0.0`, `[::]`) to `host.docker.internal`, preserving the port, path, query and fragment.
+Port references such as `${MCP_PORT}` are preserved and expanded by the runtime
+where supported; variable hostnames are left unchanged.
+Only servers supplied through `--mcp-config` are rewritten; host and sandbox
+runs keep their URLs unchanged. Config files are not modified.
+
+Use `--no-mcp-url-rewrite` when the server runs inside the container or when your
+Docker networking requires the original address:
+
+```sh
+cham run --agent claude --docker my-image --mcp-config servers.json \
+  --no-mcp-url-rewrite -p 'Use the MCP tools'
+```
+
+The rewrite assumes Docker can reach the server through `host.docker.internal`
+(as provided by Docker Desktop). On Linux Docker Engine, you may need
+`--docker-args '--add-host=host.docker.internal:host-gateway'` and a server listening
+on a host interface reachable from the container. With a remote Docker daemon,
+use an explicit reachable URL for the machine running the MCP server.
+Rewriting does not change server bindings, TLS certificates, or authentication.
+Embedders can opt out with `Request.NoMCPURLRewrite`.
+`--sandbox-no-network` blocks remote servers where network sandboxing applies.
 
 The file is trusted input: a stdio server runs its command as you. For that reason it
 is a flag (or `Request.MCPConfig`), not run-file frontmatter. Embedders must not fill

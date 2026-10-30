@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -283,5 +284,59 @@ func TestPromptFromStdinCancel(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("Main did not return after cancellation while stdin was open")
+	}
+}
+
+// Exercise CLI parsing, Request wiring and runtime configuration with fake
+// executables; this does not require Docker or authenticated agent CLIs.
+func TestMCPURLRewriteCLI(t *testing.T) {
+	isolatedHome(t)
+	bin := t.TempDir()
+	capture := filepath.Join(t.TempDir(), "launch.txt")
+	t.Setenv("MCP_CAPTURE", capture)
+	script := "#!/bin/sh\nprintf '%s\\n' \"$OPENCODE_CONFIG_CONTENT\" \"$@\" > \"$MCP_CAPTURE\"\n"
+	for _, name := range []string{"docker", "opencode"} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	t.Setenv("CHAMELEON_DOCKER_HOME", t.TempDir())
+	t.Setenv("CHAMELEON_DOCKER_SOCKET", "")
+	cfg := filepath.Join(t.TempDir(), "servers.json")
+	original := `{"mcpServers":{"local":{"url":"http://localhost:8123/mcp"},"remote":{"url":"https://example.com/mcp"},"stdio":{"command":"host-command"}}}`
+	if err := os.WriteFile(cfg, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name  string
+		flags []string
+		want  string
+	}{
+		{"docker default", []string{"--docker", "test-image"}, "http://host.docker.internal:8123/mcp"},
+		{"docker opt out", []string{"--docker", "test-image", "--no-mcp-url-rewrite"}, "http://localhost:8123/mcp"},
+		{"explicit false", []string{"--docker", "test-image", "--no-mcp-url-rewrite=false"}, "http://host.docker.internal:8123/mcp"},
+		{"host", nil, "http://localhost:8123/mcp"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args := append([]string{"run", "--agent", "opencode", "--mcp-config", cfg, "-p", "hi"}, tc.flags...)
+			var out, stderr bytes.Buffer
+			if code := Main(context.Background(), args, IO{Stdout: &out, Stderr: &stderr}); code != 0 {
+				t.Fatalf("code=%d stderr=%s", code, stderr.String())
+			}
+			launched, err := os.ReadFile(capture)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{tc.want, "https://example.com/mcp", "host-command"} {
+				if !strings.Contains(string(launched), want) {
+					t.Errorf("output %s missing %q", string(launched), want)
+				}
+			}
+		})
+	}
+	data, err := os.ReadFile(cfg)
+	if err != nil || string(data) != original {
+		t.Fatalf("config modified: %s, %v", data, err)
 	}
 }
